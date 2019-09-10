@@ -1,0 +1,7 @@
+eo-learn-core
+bunch
+tensorflow
+numpy
+tqdm
+scipy
+scikit-image
