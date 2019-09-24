@@ -2,25 +2,17 @@ import tensorflow as tf
 import logging
 import os
 
+from .configurable import Configurable
 
-class BaseModel:
-    def __init__(self, config):
-        self.config = config
+class BaseModel(Configurable):
+
+    def __init__(self, config_specs):
+        super().__init__(config_specs)
+
         # init the global step
         self.init_global_step()
         # init the epoch counter
         self.init_cur_epoch()
-        # initialise common variables
-        self.is_training = None
-        self.keep_prob = None
-        self.x = None
-        self.y = None
-        self.probs = None
-        self.preds = None
-        self.accuracy = None
-        self.loss = None
-        self.saver = None
-        self.train_step = None
 
     # save function that saves the checkpoint in the path defined in the config file
     def save(self, sess):
