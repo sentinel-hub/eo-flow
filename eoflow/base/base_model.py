@@ -1,13 +1,22 @@
 import tensorflow as tf
 import logging
 import os
+from enum import Enum
 
-from .configurable import Configurable
+from eoflow.base import Configurable
+
+class ModelMode(Enum):
+    TRAIN = 1
+    EVALUATE = 2
+    PREDICT = 3
+    EXPORT = 4
 
 class BaseModel(Configurable):
 
     def __init__(self, config_specs):
         super().__init__(config_specs)
+
+        self.summaries = []
 
         # init the global step
         self.init_global_step()
@@ -73,10 +82,13 @@ class BaseModel(Configurable):
             with tf.gfile.GFile(output_graph, "wb") as f:
                 f.write(output_graph_def.SerializeToString())
 
+    def get_merged_summaries(self):
+        return tf.summary.merge(self.summaries)
+
     def init_saver(self):
         # just copy the following line in your child class
         # self.saver = tf.train.Saver(max_to_keep=self.config.max_to_keep)
         raise NotImplementedError
 
-    def build_model(self):
+    def build_model(self, features, labels, mode):
         raise NotImplementedError

@@ -1,6 +1,6 @@
 from abc import ABC
 import inspect
-from marshmallow import Schema
+from marshmallow import Schema, fields
 from munch import Munch
 import json
 
@@ -12,6 +12,11 @@ def dict_to_munch(obj):
     if isinstance(obj, dict):
         return Munch({k: dict_to_munch(v) for k, v in obj.items()})
     return obj
+
+
+class ObjectConfiguration(Schema):
+    classname = fields.String(required=True, description="Class to instantiate.")
+    config = fields.Dict(required=True, descripton="Configuration used for instantiation of the class.")
 
 
 class Configurable(ABC):

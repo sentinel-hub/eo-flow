@@ -2,6 +2,7 @@ from bunch import Bunch
 import logging
 import json
 import os
+from pydoc import locate
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(levelname)s %(message)s')
@@ -29,3 +30,6 @@ def process_config(json_file):
     config.log_dir = os.path.join(config.exp_dir, config.exp_name, "logs/")
     config.checkpoint_dir = os.path.join(config.exp_dir, config.exp_name, "checkpoints/")
     return config
+
+def parse_classname(classname):
+    return locate(classname)
