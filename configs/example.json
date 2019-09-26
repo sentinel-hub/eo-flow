@@ -20,7 +20,8 @@
                   "batch_size": 20,
                   "batches_per_epoch": 100
               }
-          }
+          },
+          "save_steps": 200
       }
   }
 }

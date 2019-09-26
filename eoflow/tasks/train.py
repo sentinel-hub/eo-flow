@@ -1,3 +1,5 @@
+import os
+
 import tensorflow as tf
 from marshmallow import Schema, fields
 
@@ -11,6 +13,8 @@ class TrainTask(BaseTask):
         output_directory = fields.String(required=True, description='Directory of the model output', example='/tmp/model/')
 
         input_config = fields.Nested(nested=ObjectConfiguration, required=True, description="Input type and configuration.")
+
+        save_steps = fields.Int(missing=100, description="Number of training steps between model checkpoints.")
 
     def parse_input(self):
         input_config = self.config.input_config
@@ -37,6 +41,11 @@ class TrainTask(BaseTask):
             # Build model
             train_op, loss, summaries = self.model.build_model(features, labels, ModelMode.TRAIN)
 
+            # Create saver
+            step_tensor = self.model.global_step_tensor
+            checkpoint_path = os.path.join(self.config.output_directory, 'checkpoints/model.ckpt')
+            saver = tf.train.Saver()
+
             # Initialize variables
             initializer = tf.global_variables_initializer()
             sess.run(initializer)
@@ -47,7 +56,12 @@ class TrainTask(BaseTask):
 
                 while True:
                     try:
-                        _, loss_value = sess.run([train_op, loss])
+                        _, loss_value, step = sess.run([train_op, loss, step_tensor])
+
+
+                        if step % self.config.save_steps == 0:
+                            print("Saving checkpoint at step %d" % step)
+                            saver.save(sess, checkpoint_path, global_step=step)
 
                         # TODO: Save summaries, save checkpoint, show progress, ...
                         # _, loss_value, summaries = sess.run([train_op, loss, summaries])
