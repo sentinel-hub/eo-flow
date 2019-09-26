@@ -20,7 +20,8 @@ class ObjectConfiguration(Schema):
 
 
 class Configurable(ABC):
-    """Base class for all configurable objects."""
+    """ Base class for all configurable objects.
+    """
 
     def __init__(self, config_specs):
         self.schema = self.initialize_schema()
@@ -28,8 +29,9 @@ class Configurable(ABC):
 
     @classmethod
     def initialize_schema(cls):
-        """ PipelineSchema's child class should be an internal class of any Pipeline's child class. This method collects
-        this class if it is specified. Otherwise it takes default PipelineSchema class
+        """ A Schema should be provided as an internal class of any class that inherits from Configurable. 
+        This method finds the Schema by traversing the inheritance tree. If no Schema is provided or inherited
+        an error is raised.
         """
         for item in vars(cls).values():
             if inspect.isclass(item) and issubclass(item, Schema):
@@ -59,7 +61,7 @@ class Configurable(ABC):
 
 
 class Config(Munch):
-    """ Class for handling configuration files
+    """ Config object used for automatic object creation from a dict.
     """
     def __init__(self, config):
         config = dict_to_munch(config)

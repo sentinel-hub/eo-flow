@@ -32,7 +32,7 @@ class TrainTask(BaseTask):
         return dataset
 
     def run(self):
-        # TODO: configuration
+        # TODO: session configuration
         with tf.Session() as sess: 
             # Parse model input
             dataset = self.parse_input()

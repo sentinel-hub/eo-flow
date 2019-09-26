@@ -7,4 +7,6 @@ class BaseTask(Configurable):
         self.model = model
 
     def run(self):
+        """Executes the task."""
+        
         raise NotImplementedError
