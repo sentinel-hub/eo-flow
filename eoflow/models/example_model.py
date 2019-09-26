@@ -22,7 +22,7 @@ class ExampleModel(BaseModel):
                 optimizer = tf.train.AdamOptimizer(self.config.learning_rate)
                 train_op = optimizer.minimize(loss, global_step=self.global_step_tensor)
                 
-                return train_op, loss, None
+                return train_op, loss, self.get_merged_summaries()
 
         elif mode == ModelMode.PREDICT:
             probabilities = tf.softmax(d2)

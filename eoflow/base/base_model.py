@@ -83,7 +83,10 @@ class BaseModel(Configurable):
                 f.write(output_graph_def.SerializeToString())
 
     def get_merged_summaries(self):
-        return tf.summary.merge(self.summaries)
+        if len(self.summaries) > 0:
+            return tf.summary.merge(self.summaries)
+        else:
+            return tf.constant("")
 
     def init_saver(self):
         # just copy the following line in your child class
