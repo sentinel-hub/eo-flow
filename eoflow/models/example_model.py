@@ -19,6 +19,8 @@ class ExampleModel(BaseModel):
         if mode == ModelMode.TRAIN:
             with tf.name_scope("loss"):
                 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=d2))
+                # Add summary for loss
+                self.summaries.append(tf.summary.scalar('loss', loss))
                 optimizer = tf.train.AdamOptimizer(self.config.learning_rate)
                 train_op = optimizer.minimize(loss, global_step=self.global_step_tensor)
                 

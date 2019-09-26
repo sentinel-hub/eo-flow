@@ -22,7 +22,7 @@
                 }
             },
             "save_steps": 400,
-            "summary_steps": 10,
+            "summary_steps": 50,
             "progress_steps": 100
         }
     }
