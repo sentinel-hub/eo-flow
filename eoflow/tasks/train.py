@@ -5,7 +5,7 @@ from marshmallow import Schema, fields
 
 from eoflow.base import Configurable, BaseTask, BaseInput, ModelMode
 from eoflow.base.configuration import ObjectConfiguration
-from eoflow.utils import parse_classname
+from eoflow.utils import parse_classname, create_dirs
 
 class TrainTask(BaseTask):
     class TrainTaskConfig(Schema):
@@ -43,7 +43,9 @@ class TrainTask(BaseTask):
 
             # Create saver
             step_tensor = self.model.global_step_tensor
-            checkpoint_path = os.path.join(self.config.output_directory, 'checkpoints/model.ckpt')
+            checkpoint_dir = os.path.join(self.config.output_directory, 'checkpoints')
+            create_dirs([checkpoint_dir])
+            checkpoint_path = os.path.join(checkpoint_dir, 'model.ckpt')
             saver = tf.train.Saver()
 
             # Initialize variables
