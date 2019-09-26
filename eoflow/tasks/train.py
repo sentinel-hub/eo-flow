@@ -17,10 +17,10 @@ class TrainTask(BaseTask):
         classname, config = input_config.classname, input_config.config
 
         cls = parse_classname(classname)
-        model_input = cls(config)
-
         if not issubclass(cls, BaseInput):
             raise ValueError("Data input class does not inherit from BaseInput.")
+
+        model_input = cls(config)
 
         dataset = model_input.get_dataset()
         return dataset

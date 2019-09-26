@@ -3,6 +3,7 @@ import json
 
 from marshmallow import Schema, fields
 
+from eoflow.base import BaseModel, BaseTask
 from eoflow.base.configuration import ObjectConfiguration, Config
 from eoflow.utils import parse_classname
 
@@ -17,9 +18,13 @@ def execute(config_file):
     config = Config(ExecutionConfig().load(config))
     
     model_cls = parse_classname(config.model.classname)
+    if not issubclass(model_cls, BaseModel):
+        raise ValueError("Model class does not inherit from BaseModel.")
     model = model_cls(config.model.config)
 
     task_cls = parse_classname(config.task.classname)
+    if not issubclass(task_cls, BaseTask):
+        raise ValueError("Task class does not inherit from BaseTask.")
     task = task_cls(model, config.task.config)
 
     task.run()
