@@ -14,7 +14,23 @@ class FCNModel(BaseModel):
     """ Implementation of a vanilla Fully-Convolutional-Network (aka U-net) """
 
     class FCNModelSchema(Schema):
-        pass
+        learning_rate = fields.Float(missing=None, description='Learning rate used in training.', example=0.01)
+        n_layers = fields.Int(required=True, description='Number of layers of the FCN model', example=10)
+        keep_prob = fields.Float(required=True, description='Keep probability used in dropout layers.', example=0.5)
+        features_root = fields.Int(required=True, description='Number of features at the root level.', example=32)
+
+        conv_size = fields.Int(missing=3, description='Size of the convolution kernels.')
+        deconv_size = fields.Int(missing=2, description='Size of the deconvolution kernels.')
+        conv_stride = fields.Int(missing=1, description='Stride used in convolutions.')
+        add_dropout = fields.Bool(missing=False, description='Add dropout to layers.')
+        add_batch_norm = fields.Bool(missing=True, description='Add batch normalization to layers.')
+        bias_init = fields.Float(missing=0.0, description='Bias initialization value.')
+        padding = fields.String(missing='VALID', description='Padding type used in convolutions.')
+
+        pool_size = fields.Int(missing=2, description='Kernel size used in max pooling.')
+        pool_stride = fields.Int(missing=2, description='Stride used in max pooling.')
+
+        class_weights = fields.List(fields.Float, missing=None, description='Class weights used in training.')
 
     def _net(self, x, is_training):
         """Builds the net for input x."""
@@ -115,7 +131,7 @@ class FCNModel(BaseModel):
             flat_logits = tf.reshape(logits, [-1, self.config.n_classes])
             flat_labels = tf.reshape(labels, [-1, self.config.n_classes])
 
-            if self.config.class_weights or self.config.class_weights is not None:
+            if self.config.class_weights is not None:
                 loss = weighted_cross_entropy(flat_logits, flat_labels, self.config.class_weights)
             else:
                 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=flat_logits, labels=flat_labels))
@@ -131,7 +147,7 @@ class FCNModel(BaseModel):
 
 
         # softmax to convert activations to pseudo-probabilities
-        probs = tf.nn.softmax(logits, name=self.config.node_names)
+        probs = tf.nn.softmax(logits)
         # class prediction as argmax of softmax
         preds = tf.argmax(probs, 3)
 
