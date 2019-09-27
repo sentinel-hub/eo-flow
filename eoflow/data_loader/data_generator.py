@@ -109,39 +109,6 @@ class DataGenerator:
         label[..., 0] = np.where(np.sum(label, axis=-1) == 0, 1, label[..., 0])
         return label
 
-class ExampleDataGenerator(BaseInput):
-    """ Class to create random example batches """
-
-    class ClassSchema(Schema):
-        input_size = fields.Int(required=True, description='Input size of the model', example=784)
-        output_size = fields.Int(required=True, description='Output size of the model', example=10)
-        batch_size = fields.Int(required=True, description='Batch size', example=20)
-        batches_per_epoch = fields.Int(required=True, description='Number of batches in epoch', example=20)
-
-
-    def generate(self):
-        i_s = [self.config.batch_size, self.config.input_size]
-        l_s = [self.config.batch_size, self.config.output_size]
-
-        for i in range(self.config.batches_per_epoch):
-            # input data
-            input_data = np.random.rand(*i_s)
-
-            # one hot labels
-            I = np.eye(self.config.output_size)
-            indices = np.random.randint(self.config.output_size, size=self.config.batch_size)
-            labels = I[indices]
-
-            yield input_data, labels
-
-    def get_dataset(self):
-        dataset = tf.data.Dataset.from_generator(
-            self.generate, 
-            (tf.float32, tf.int64),
-            (tf.TensorShape([None, self.config.input_size]), tf.TensorShape([None, self.config.output_size]))
-        )
-
-        return dataset
 
 class MultiTempBatchGenerator(DataGenerator):
     def __init__(self, config):
