@@ -1,26 +1,27 @@
 import tensorflow as tf
 import logging
 import os
+from enum import Enum
 
+from eoflow.base import Configurable
 
-class BaseModel:
-    def __init__(self, config):
-        self.config = config
+class ModelMode(Enum):
+    TRAIN = 1
+    EVALUATE = 2
+    PREDICT = 3
+    EXPORT = 4
+
+class BaseModel(Configurable):
+
+    def __init__(self, config_specs):
+        super().__init__(config_specs)
+
+        self.summaries = []
+
         # init the global step
         self.init_global_step()
         # init the epoch counter
         self.init_cur_epoch()
-        # initialise common variables
-        self.is_training = None
-        self.keep_prob = None
-        self.x = None
-        self.y = None
-        self.probs = None
-        self.preds = None
-        self.accuracy = None
-        self.loss = None
-        self.saver = None
-        self.train_step = None
 
     # save function that saves the checkpoint in the path defined in the config file
     def save(self, sess):
@@ -81,10 +82,32 @@ class BaseModel:
             with tf.gfile.GFile(output_graph, "wb") as f:
                 f.write(output_graph_def.SerializeToString())
 
+    def add_summary(self, summary):
+        """Adds a summary to the list of recorded summaries."""
+
+        self.summaries.append(summary)
+
+    def get_merged_summaries(self):
+        """Merges all the specified summaries and returns the merged summary tensor."""
+
+        if len(self.summaries) > 0:
+            return tf.summary.merge(self.summaries)
+        else:
+            return tf.constant("")
+
     def init_saver(self):
         # just copy the following line in your child class
         # self.saver = tf.train.Saver(max_to_keep=self.config.max_to_keep)
         raise NotImplementedError
 
-    def build_model(self):
+    def build_model(self, features, labels, mode):
+        """Builds the model for the provided input features and labels.
+        
+        :param features: Input features tensor. Can be a single tensor or a dict of tensors.
+        :type features: tf.tensor | dict(str, tf.tensor)
+        :param labels: Labels tensor. Can be a single tensor or a dict of tensors.
+        :type labels: tf.tensor | dict(str, tf.tensor)
+        :param mode: Mode to use for building the model
+        :type mode: eoflow.base.ModelMode
+        """
         raise NotImplementedError
