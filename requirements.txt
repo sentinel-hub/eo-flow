@@ -1,6 +1,8 @@
 eo-learn-core
-bunch
+eo-learn-io
+munch
 tensorflow
+marshmallow
 numpy
 tqdm
 scipy
