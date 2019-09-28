@@ -5,3 +5,5 @@ tensorflow
 marshmallow
 numpy
 tqdm
+scipy
+scikit-image
