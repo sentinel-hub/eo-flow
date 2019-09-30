@@ -3,9 +3,9 @@ import json
 
 from marshmallow import Schema, fields
 
-from eoflow.base import BaseModel, BaseTask
-from eoflow.base.configuration import ObjectConfiguration, Config
-from eoflow.utils import parse_classname
+from .base import BaseModel, BaseTask
+from .base.configuration import ObjectConfiguration, Config
+from .utils import parse_classname
 
 class ExecutionConfig(Schema):
     model = fields.Nested(ObjectConfiguration, required=True, description='Model configuration')

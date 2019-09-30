@@ -1,0 +1,42 @@
+{
+    "model": {
+        "classname": "eoflow.models.RFCNModel",
+        "config": {
+            "learning_rate": 0.0001,
+            "n_layers": 3,
+            "n_classes": 2,
+            "keep_prob": 0.8,
+            "features_root": 32,
+            "conv_size": 3,
+            "conv_stride": 1,
+            "deconv_size": 2,
+            "add_dropout": true,
+            "add_batch_norm": false,
+            "bias_init": 0.0,
+            "padding": "VALID",
+            "pool_size": 2,
+            "pool_stride": 2
+        }
+    },
+    "task": {
+        "classname": "eoflow.tasks.TrainTask",
+        "config": {
+            "num_epochs": 2,
+            "output_directory": "./temp/experiment_rfcn",
+            "input_config":{
+                "classname": "eoflow.input.random.RandomSegmentationInput",
+                "config": {
+                    "input_shape": [10, 150, 150, 13],
+                    "output_shape": [76, 76],
+                    "num_classes": 2,
+                    "batch_size": 1,
+                    "batches_per_epoch": 1000
+                }
+            },
+            "save_steps": 100,
+            "summary_steps": 50,
+            "progress_steps": 1
+        }
+    }
+  }
+  

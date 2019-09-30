@@ -1,4 +1,4 @@
-from eoflow.base import Configurable
+from . import Configurable
 
 class BaseInput(Configurable):
     def get_dataset(self):
