@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from marshmallow import fields, Schema
 
-from eoflow.base import BaseInput
+from ..base import BaseInput
 
 class RandomClassificationInput(BaseInput):
     """ Class to create random batches for classification tasks. """

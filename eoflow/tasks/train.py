@@ -3,9 +3,9 @@ import os
 import tensorflow as tf
 from marshmallow import Schema, fields
 
-from eoflow.base import Configurable, BaseTask, BaseInput, ModelMode
-from eoflow.base.configuration import ObjectConfiguration
-from eoflow.utils import parse_classname, create_dirs
+from ..base import Configurable, BaseTask, BaseInput, ModelMode
+from ..base.configuration import ObjectConfiguration
+from ..utils import parse_classname, create_dirs
 
 class TrainTask(BaseTask):
     class TrainTaskConfig(Schema):

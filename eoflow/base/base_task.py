@@ -1,4 +1,4 @@
-from eoflow.base import Configurable
+from . import Configurable
 
 class BaseTask(Configurable):
     def __init__(self, model, config_specs):

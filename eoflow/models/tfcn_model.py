@@ -3,7 +3,7 @@ import tensorflow as tf
 from marshmallow import Schema, fields
 from marshmallow.validate import OneOf
 
-from eoflow.base import BaseModel, ModelMode
+from ..base import BaseModel, ModelMode
 from .layers import conv1d, conv2d, conv3d, deconv2d, crop_and_concat, max_pool_3d, reduce_3d_to_2d, \
     weighted_cross_entropy,  compute_iou_loss
 

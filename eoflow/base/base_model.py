@@ -3,7 +3,7 @@ import logging
 import os
 from enum import Enum
 
-from eoflow.base import Configurable
+from . import Configurable
 
 class ModelMode(Enum):
     TRAIN = 1

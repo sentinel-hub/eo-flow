@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 from marshmallow import Schema, fields
 
-from eoflow.base import BaseModel, ModelMode
+from ..base import BaseModel, ModelMode
 from .layers import conv1d, conv2d, deconv2d, crop_and_concat, max_pool_2d, weighted_cross_entropy
 
 logging.basicConfig(level=logging.INFO,
