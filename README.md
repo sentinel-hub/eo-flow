@@ -1,12 +1,17 @@
-# Tensorflow projects
+# EOFlow
 
 This repository provides a templated structure to generate TensorFlow projects. Using the same base structure for all TF projects should benefit model creation, debugging and experiments reproducibility.
 
 The project contains the package `eoflow` which contains the base abstract classes and implements the common models, tasks and input methods. Custom models tasks and input methods can also be implemented building on top of the provided abstract classes.
 
-The package can be installed by running the following command in the root directory of the project.
+The package can be installed by running the following command.
 ```
-$ pip install eoflow
+$ pip install git+https://github.com/sentinel-hub/eo-flow
+```
+
+You can also install the package from source. Clone the repository and run the following command in the root directory of the project.
+```
+$ pip install .
 ```
 
 The project also contains example configurations to run common tasks on implemented models. Examples of implementing and running custom models and input methods are also provided.
