@@ -11,47 +11,47 @@ from .operations import extract_subpatches
 _valid_types = [t.value for t in FeatureType]
 
 def eopatch_dataset(data_dir, features_data):
-        """ Reads a features and labels from a single EOPatch.
+    """ Reads a features and labels from a single EOPatch.
 
-        :param data_dir: Root directory containing eopatches in the dataset
-        :type data_dir: str
-        :param features_data: List of tuples containing data about features to extract.
-            Tuple structure: (feature_type, feature_name, out_feature_name, feature_dtype, feature_ndims)
-        :type features_data: (str, str, str, np.dtype, int)
-        """
+    :param data_dir: Root directory containing eopatches in the dataset
+    :type data_dir: str
+    :param features_data: List of tuples containing data about features to extract.
+        Tuple structure: (feature_type, feature_name, out_feature_name, feature_dtype, feature_ndims)
+    :type features_data: (str, str, str, np.dtype, int)
+    """
 
-        file_pattern = os.path.join(data_dir, '*')
-        dataset = tf.data.Dataset.list_files(file_pattern)
+    file_pattern = os.path.join(data_dir, '*')
+    dataset = tf.data.Dataset.list_files(file_pattern)
 
-        def _read_patch(path):
-            """ TF op for reading an eopatch at a given path. """
-            def _func(path):
-                path = path.decode('utf-8')
+    def _read_patch(path):
+        """ TF op for reading an eopatch at a given path. """
+        def _func(path):
+            path = path.decode('utf-8')
 
-                # Load only relevant features
-                features = [(data[0], data[1]) for data in features_data]
-                patch = EOPatch.load(path, features=features)
+            # Load only relevant features
+            features = [(data[0], data[1]) for data in features_data]
+            patch = EOPatch.load(path, features=features)
 
-                data = []
-                for feat_type, feat_name, out_name, dtype, ndims in features_data:
-                    arr = patch[feat_type][feat_name].astype(dtype)
-                    data.append(arr)
+            data = []
+            for feat_type, feat_name, out_name, dtype, ndims in features_data:
+                arr = patch[feat_type][feat_name].astype(dtype)
+                data.append(arr)
 
-                return data
+            return data
 
-            out_types = [tf.as_dtype(data[3]) for data in features_data]
-            data = tf.py_func(_func, [path], out_types)
+        out_types = [tf.as_dtype(data[3]) for data in features_data]
+        data = tf.py_func(_func, [path], out_types)
 
-            out_data = {}
-            for f_data, feature in zip(features_data, data):
-                feat_type, feat_name, out_name, dtype, ndims = f_data
-                feature.set_shape((None,) * ndims)
-                out_data[out_name] = feature
+        out_data = {}
+        for f_data, feature in zip(features_data, data):
+            feat_type, feat_name, out_name, dtype, ndims = f_data
+            feature.set_shape((None,) * ndims)
+            out_data[out_name] = feature
 
-            return out_data
+        return out_data
 
-        dataset = dataset.map(_read_patch)
-        return dataset
+    dataset = dataset.map(_read_patch)
+    return dataset
 
 
 class EOPatchInput(BaseInput):
