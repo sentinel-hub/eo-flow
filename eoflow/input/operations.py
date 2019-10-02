@@ -133,3 +133,32 @@ def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=Fa
         return tf.data.Dataset.from_tensor_slices(data_out)
 
     return _fn
+
+def augment_data(features_to_augment, brightness_delta=0.1, contrast_bounds=(0.9,1.1)):
+    """ Builds a function that randomly augments features in specified ways. """
+    
+    def _augment(data):
+        contrast_lower, contrast_upper = contrast_bounds
+
+        flip_lr_cond = tf.random.uniform(shape=[]) > 0.5
+        flip_ud_cond = tf.random.uniform(shape=[]) > 0.5
+        rot90_amount = tf.random.uniform(shape=[], maxval=4, dtype=tf.int32)
+
+        # Available operations
+        operations = {
+            'flip_left_right': lambda x: tf.cond(flip_lr_cond, lambda: tf.image.flip_left_right(x), lambda: x),
+            'flip_up_down': lambda x: tf.cond(flip_ud_cond, lambda: tf.image.flip_up_down(x), lambda: x),
+            'rotate': lambda x: tf.image.rot90(x, rot90_amount),
+            'brightness': lambda x: tf.image.random_brightness(x, brightness_delta),
+            'contrast': lambda x: tf.image.random_contrast(x, contrast_lower, contrast_upper)
+        }
+
+        for feature, ops in features_to_augment:
+            # Apply specified ops to feature
+            for op in ops:
+                operation_fn = operations[op]
+                data[feature] = operation_fn(data[feature])
+        
+        return data
+
+    return _augment

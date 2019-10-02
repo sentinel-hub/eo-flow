@@ -6,7 +6,7 @@ from marshmallow.validate import OneOf
 from eolearn.core import EOPatch, FeatureType
 
 from ..base import BaseInput
-from .operations import extract_subpatches
+from .operations import extract_subpatches, augment_data
 
 _valid_types = [t.value for t in FeatureType]
 
@@ -91,6 +91,12 @@ class EOPatchInput(BaseInput):
         )
         dataset = dataset.interleave(extract_fn, self.config.interleave_size)
 
+        feature_augmentation = [
+            ('features', ['flip_left_right', 'rotate']),
+            ('labels', ['flip_left_right', 'rotate'])
+        ]
+        dataset = dataset.map(augment_data(feature_augmentation))
+        
         dataset = dataset.batch(self.config.batch_size)
 
         return dataset
