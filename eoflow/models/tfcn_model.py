@@ -157,6 +157,11 @@ class TFCNModel(BaseModel):
             out_shape = tf.shape(logits)
             labels_cropped = tf.image.resize_with_crop_or_pad(labels, out_shape[1], out_shape[2])
 
+            self.add_summary(tf.summary.image('input', features[:,0,...][...,0:3]))
+            self.add_summary(tf.summary.image('labels_raw', labels[...,0:3]))
+            self.add_summary(tf.summary.image('labels', labels_cropped[...,0:3]))
+            self.add_summary(tf.summary.image('output', logits[...,0:3]))
+
             # flatten tensors to apply class weighting
             flat_logits = tf.reshape(logits, [-1, self.config.n_classes])
             flat_labels = tf.reshape(labels_cropped, [-1, self.config.n_classes])
