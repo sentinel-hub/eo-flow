@@ -31,7 +31,7 @@
                 "classname": "eoflow.input.random.RandomSegmentationInput",
                 "config": {
                     "input_shape": [10, 150, 150, 13],
-                    "output_shape": [76, 76],
+                    "output_shape": [150, 150],
                     "num_classes": 2,
                     "batch_size": 1,
                     "batches_per_epoch": 1000
