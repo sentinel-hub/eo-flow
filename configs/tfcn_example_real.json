@@ -4,7 +4,7 @@
         "config": {
             "learning_rate": 0.0001,
             "n_layers": 3,
-            "n_classes": 2,
+            "n_classes": 10,
             "keep_prob": 0.8,
             "features_root": 16,
             "conv_size": 3,
@@ -39,14 +39,14 @@
                     "labels_feature_name": "LULC_RABA",
                     "labels_feature_axis": [0,1],
                     "labels_feature_shape": [-1, -1, 1],
-                    "patch_size": [150, 150],
+                    "patch_size": [128, 128],
                     "interleave_size": 3,
-                    "batch_size": 10,
+                    "batch_size": 5,
                     "num_classes": 10
                 }
             },
             "save_steps": 100,
-            "summary_steps": 50,
+            "summary_steps": 10,
             "progress_steps": 1
         }
     }
