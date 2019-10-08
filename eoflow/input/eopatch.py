@@ -10,7 +10,7 @@ from .operations import extract_subpatches, augment_data
 
 _valid_types = [t.value for t in FeatureType]
 
-def eopatch_dataset(data_dir, features_data):
+def eopatch_dataset(data_dir, features_data, fill_na=None):
     """ Reads a features and labels from a single EOPatch.
 
     :param data_dir: Root directory containing eopatches in the dataset
@@ -18,6 +18,8 @@ def eopatch_dataset(data_dir, features_data):
     :param features_data: List of tuples containing data about features to extract.
         Tuple structure: (feature_type, feature_name, out_feature_name, feature_dtype, feature_shape)
     :type features_data: (str, str, str, np.dtype, tuple)
+    :param fill_na: Value with wich to replace nan values. No replacement is done if None.
+    :type fill_na: int
     """
 
     file_pattern = os.path.join(data_dir, '*')
@@ -35,6 +37,10 @@ def eopatch_dataset(data_dir, features_data):
             data = []
             for feat_type, feat_name, out_name, dtype, shape in features_data:
                 arr = patch[feat_type][feat_name].astype(dtype)
+
+                if fill_na is not None:
+                    arr[np.isnan(arr)] = fill_na
+
                 data.append(arr)
 
             return data
@@ -90,7 +96,7 @@ class EOPatchInput(BaseInput):
             (cfg.labels_feature_type, cfg.labels_feature_name, 'labels', np.int64, self._parse_shape(cfg.labels_feature_shape))
         ]
 
-        dataset = eopatch_dataset(self.config.data_dir, features_data)
+        dataset = eopatch_dataset(self.config.data_dir, features_data, fill_na=-2)
 
         extract_fn = extract_subpatches(
             self.config.patch_size,
