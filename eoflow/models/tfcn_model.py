@@ -40,6 +40,8 @@ class TFCNModel(BaseModel):
         loss = fields.String(missing='cross-entropy', description='Loss function used in training.',
                              validate=OneOf(['cross-entropy', 'iou', 'combined']))
 
+        image_summaries = fields.Bool(missing=False, description='Record images summaries.')
+
     def _net(self, x, is_training):
 
         net = x
@@ -157,10 +159,11 @@ class TFCNModel(BaseModel):
             out_shape = tf.shape(logits)
             labels_cropped = tf.image.resize_with_crop_or_pad(labels, out_shape[1], out_shape[2])
 
-            self.add_summary(tf.summary.image('input', features[:,0,...][...,0:3]))
-            self.add_summary(tf.summary.image('labels_raw', labels[...,0:3]))
-            self.add_summary(tf.summary.image('labels', labels_cropped[...,0:3]))
-            self.add_summary(tf.summary.image('output', logits[...,0:3]))
+            if self.config.image_summaries:
+                self.add_summary(tf.summary.image('input', features[:,0,...][...,0:3]))
+                self.add_summary(tf.summary.image('labels_raw', labels[...,0:3]))
+                self.add_summary(tf.summary.image('labels', labels_cropped[...,0:3]))
+                self.add_summary(tf.summary.image('output', logits[...,0:3]))
 
             # flatten tensors to apply class weighting
             flat_logits = tf.reshape(logits, [-1, self.config.n_classes])
@@ -183,6 +186,8 @@ class TFCNModel(BaseModel):
                 loss = iou_loss
             elif self.config.loss == 'combined':
                 loss = cross_entropy_loss + iou_loss
+
+            self.add_summary(tf.summary.scalar('loss', loss))
 
             # update operations for batch-normalisation and define train stepo as minimisation of loss
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)

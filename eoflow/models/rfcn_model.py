@@ -33,11 +33,13 @@ class RFCNModel(BaseModel):
 
         class_weights = fields.List(fields.Float, missing=None, description='Class weights used in training.')
 
+        image_summaries = fields.Bool(missing=False, description='Record images summaries.')
+
     def _net(self, x, is_training):
 
         net = x
         keep_prob = self.config.keep_prob if is_training else 1.0
-        
+
         # encoding path
         connection_outputs = []
         for layer in range(self.config.n_layers):
@@ -128,7 +130,7 @@ class RFCNModel(BaseModel):
                         self.config.n_classes,
                         scope='logits',
                         bias_init=self.config.bias_init)
-                        
+
         return logits
 
     def build_model(self, features, labels, mode):
@@ -142,6 +144,13 @@ class RFCNModel(BaseModel):
             out_shape = tf.shape(logits)
             labels_cropped = tf.image.resize_with_crop_or_pad(labels, out_shape[1], out_shape[2])
 
+            # Image summaries
+            if self.config.image_summaries:
+                self.add_summary(tf.summary.image('input', features[:,0,...][...,0:3]))
+                self.add_summary(tf.summary.image('labels_raw', labels[...,0:3]))
+                self.add_summary(tf.summary.image('labels', labels_cropped[...,0:3]))
+                self.add_summary(tf.summary.image('output', logits[...,0:3]))
+
             # flatten tensors to apply class weighting
             flat_logits = tf.reshape(logits, [-1, self.config.n_classes])
             flat_labels = tf.reshape(labels_cropped, [-1, self.config.n_classes])
@@ -150,6 +159,8 @@ class RFCNModel(BaseModel):
                 loss = weighted_cross_entropy(flat_logits, flat_labels, self.config.class_weights)
             else:
                 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=flat_logits, labels=flat_labels))
+
+            self.add_summary(tf.summary.scalar('loss', loss))
 
             # update operations for batch-normalisation and define train stepo as minimisation of loss
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -166,7 +177,7 @@ class RFCNModel(BaseModel):
         preds = tf.argmax(probs, 3)
 
         if mode == ModelMode.PREDICT:
-            
+
             predictions = {
                 'probabilities': probs,
                 'predictions': preds
@@ -178,4 +189,4 @@ class RFCNModel(BaseModel):
             # compute classification accuracy
             accuracy = tf.reduce_mean(tf.cast(tf.equal(preds, tf.argmax(labels, 3)), tf.float32))
 
-            return accuracy 
+            return accuracy
