@@ -2,6 +2,7 @@ import os
 import numpy as np
 import tensorflow as tf
 
+from ..utils import create_dirs
 
 def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=False, num_random_samples=20, grid_overlap=0.2):
     """ Builds a TF op for building a dataset of subpatches from tensors. Subpatches sampling can be random or grid based. """
@@ -162,3 +163,20 @@ def augment_data(features_to_augment, brightness_delta=0.1, contrast_bounds=(0.9
         return data
 
     return _augment
+
+def cache_dataset(dataset, path):
+    """ Caches dataset into a file. Each element in the dataset will be computed only once. """
+
+    # Create dir if missing
+    directory = os.path.dirname(path)
+    create_dirs([directory])
+
+    # Cache
+    dataset = dataset.cache(path)
+
+    # Disable map and batch fusion to prevent a bug when caching
+    options = tf.data.Options()
+    options.experimental_optimization.map_and_batch_fusion = False
+    dataset = dataset.with_options(options)
+
+    return dataset
