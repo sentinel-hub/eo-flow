@@ -19,7 +19,8 @@
             "pool_time": false,
             "single_encoding_conv": true,
             "conv_size_reduce": 3,
-            "loss": "cross-entropy"
+            "loss": "cross-entropy",
+            "image_summaries": true
         }
     },
     "task": {

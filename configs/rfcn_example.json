@@ -4,7 +4,7 @@
         "config": {
             "learning_rate": 0.0001,
             "n_layers": 3,
-            "n_classes": 2,
+            "n_classes": 3,
             "keep_prob": 0.8,
             "features_root": 32,
             "conv_size": 3,
@@ -26,9 +26,9 @@
             "input_config":{
                 "classname": "eoflow.input.random.RandomSegmentationInput",
                 "config": {
-                    "input_shape": [10, 150, 150, 13],
-                    "output_shape": [76, 76],
-                    "num_classes": 2,
+                    "input_shape": [10, 128, 128, 13],
+                    "output_shape": [128, 128],
+                    "num_classes": 3,
                     "batch_size": 1,
                     "batches_per_epoch": 1000
                 }
