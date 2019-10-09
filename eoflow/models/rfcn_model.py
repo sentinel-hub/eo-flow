@@ -139,9 +139,12 @@ class RFCNModel(BaseModel):
         logits = self._net(x, is_training)
 
         if mode == ModelMode.TRAIN:
+            out_shape = tf.shape(logits)
+            labels_cropped = tf.image.resize_with_crop_or_pad(labels, out_shape[1], out_shape[2])
+
             # flatten tensors to apply class weighting
             flat_logits = tf.reshape(logits, [-1, self.config.n_classes])
-            flat_labels = tf.reshape(labels, [-1, self.config.n_classes])
+            flat_labels = tf.reshape(labels_cropped, [-1, self.config.n_classes])
 
             if self.config.class_weights is not None:
                 loss = weighted_cross_entropy(flat_logits, flat_labels, self.config.class_weights)
