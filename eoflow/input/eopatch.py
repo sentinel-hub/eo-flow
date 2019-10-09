@@ -6,7 +6,7 @@ from marshmallow.validate import OneOf
 from eolearn.core import EOPatch, FeatureType
 
 from ..base import BaseInput
-from .operations import extract_subpatches, augment_data
+from .operations import extract_subpatches, augment_data, cache_dataset
 
 _valid_types = [t.value for t in FeatureType]
 
@@ -60,8 +60,8 @@ def eopatch_dataset(data_dir, features_data, fill_na=None):
     return dataset
 
 
-class EOPatchInput(BaseInput):
-    """ Class to create random batches for classification tasks. """
+class EOPatchInputExample(BaseInput):
+    """ An example input method. Shows reading EOPatches, subpatch extraction, data augmentation, caching, batching, etc. """
 
     class _Schema(Schema):
         data_dir = fields.String(description="The directory containing EOPatches.", required=True)
@@ -84,6 +84,9 @@ class EOPatchInput(BaseInput):
         batch_size = fields.Int(description="Number of examples in a batch.", required=True, example=20)
         num_classes = fields.Int(description="Number of classes. Used for one-hot encoding.", required=True, example=2)
 
+        cache_file = fields.String(
+            missing=None, description="A path to the file where the dataset will be cached. No caching if not provided.", example='/tmp/data')
+        num_subpatches = fields.Int(required=True, description="Number of subpatches extracted by random sampling.", example=5)
 
     def _parse_shape(self, shape):
         shape = [None if s<0 else s for s in shape]
@@ -91,22 +94,32 @@ class EOPatchInput(BaseInput):
 
     def get_dataset(self):
         cfg = self.config
+
+        # Create a tf.data.Dataset from EOPatches
         features_data = [
             (cfg.input_feature_type, cfg.input_feature_name, 'features', np.float32, self._parse_shape(cfg.input_feature_shape)),
             (cfg.labels_feature_type, cfg.labels_feature_name, 'labels', np.int64, self._parse_shape(cfg.labels_feature_shape))
         ]
-
         dataset = eopatch_dataset(self.config.data_dir, features_data, fill_na=-2)
 
+        # Extract random subpatches
         extract_fn = extract_subpatches(
             self.config.patch_size,
             [('features', self.config.input_feature_axis),
              ('labels', self.config.labels_feature_axis)],
+             random_sampling=True,
+             num_random_samples=self.config.num_subpatches
         )
+        # Interleave patches extracted from multiple EOPatches
         dataset = dataset.interleave(extract_fn, self.config.interleave_size)
+        
+        # Cache the dataset so the patch extraction is done only once
+        if self.config.cache_file is not None:
+            dataset = cache_dataset(dataset, self.config.cache_file)
 
+        # Data augmentation
         feature_augmentation = [
-            ('features', ['flip_left_right', 'rotate']),
+            ('features', ['flip_left_right', 'rotate', 'brightness']),
             ('labels', ['flip_left_right', 'rotate'])
         ]
         dataset = dataset.map(augment_data(feature_augmentation))
@@ -122,6 +135,7 @@ class EOPatchInput(BaseInput):
 
         dataset = dataset.map(_prepare_data)
 
+        # Create batches
         dataset = dataset.batch(self.config.batch_size)
 
         return dataset
