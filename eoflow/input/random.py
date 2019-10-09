@@ -32,7 +32,7 @@ class RandomClassificationInput(BaseInput):
 
         dataset = tf.data.Dataset.from_generator(
             self._generate_batch,
-            (tf.float32, tf.int64),
+            (tf.float32, tf.float32),
             (tf.TensorShape(input_shape), tf.TensorShape(output_shape))
         )
 
@@ -68,7 +68,7 @@ class RandomSegmentationInput(BaseInput):
 
         dataset = tf.data.Dataset.from_generator(
             self._generate_batch,
-            (tf.float32, tf.int64),
+            (tf.float32, tf.float32),
             (tf.TensorShape(input_shape), tf.TensorShape(output_shape))
         )
 
