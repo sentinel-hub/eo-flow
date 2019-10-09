@@ -5,7 +5,20 @@ import tensorflow as tf
 from ..utils import create_dirs
 
 def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=False, num_random_samples=20, grid_overlap=0.2):
-    """ Builds a TF op for building a dataset of subpatches from tensors. Subpatches sampling can be random or grid based. """
+    """ Builds a TF op for building a dataset of subpatches from tensors. Subpatches sampling can be random or grid based. 
+    
+    :param patch_size: Width and height of extracted patches
+    :type patch_size: (int, int)
+    :param spatial_features_and_axis: List of features from which subpatches are extracted and their height and width axis.
+                                      Elements are tuples of (feature_name, (axis_h, axis_w)).
+    :type spatial_features_and_axis: list of (string, (int, int))
+    :param random_sampling: If True random sampling is used. Else grid based sampling is used.
+    :type random_sampling: bool
+    :param num_random_samples: Defines the number of subpatches to sample, when random sampling is used.
+    :type num_random_samples: int
+    :param grid_overlap: Amount of overlap between subpatches extracted from a grid
+    :type grid_overlap: float
+    """
 
     patch_w,patch_h = patch_size
     def _fn(data):
@@ -136,7 +149,16 @@ def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=Fa
     return _fn
 
 def augment_data(features_to_augment, brightness_delta=0.1, contrast_bounds=(0.9,1.1)):
-    """ Builds a function that randomly augments features in specified ways. """
+    """ Builds a function that randomly augments features in specified ways. 
+    
+    param features_to_augment: List of features to augment and which operations to perform on them.
+                               Each element is of shape (feature, list_of_operations).
+    type features_to_augment: list of (str, list of str)
+    param brightness_delta: Maximum brightness change.
+    type brightness_delta: float
+    param contrast_bounds: Upper and lower bounds of contrast multiplier.
+    type contrast_bounds: (float, float)
+    """
     
     def _augment(data):
         contrast_lower, contrast_upper = contrast_bounds
