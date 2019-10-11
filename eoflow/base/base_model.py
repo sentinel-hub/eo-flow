@@ -103,7 +103,7 @@ class BaseModel(Configurable):
         :param progress_steps: Number of steps between outputing progress to stdout.
         :type progress_steps: int
         """
-        
+
         # Clear graph
         tf.reset_default_graph()
 
@@ -175,3 +175,48 @@ class BaseModel(Configurable):
             # Save at the end of training
             print("Saving checkpoint at step %d." % step)
             saver.save(sess, checkpoint_path, global_step=step)
+
+    def predict(self, dataset_fn, model_directory):
+        """ Runs the prediction on the model with the provided dataset
+        
+        :param dataset_fn: A function that builds and returns a tf.data.Dataset containing the input data.
+        :type dataset_fn: function
+        :param model_directory: Model directory that was used in training (`output_directory`).
+        :type model_directory: str
+
+        :return: List of predictions. Structure of predictions is defined by the model.
+        :rtype: list
+        """
+        # Clear graph
+        tf.reset_default_graph()
+
+        with tf.Session() as sess:
+            # Build the dataset
+            dataset = dataset_fn()
+            iterator = dataset.make_one_shot_iterator()
+            features, labels = iterator.get_next()
+
+            # Build model
+            self.init_global_step()
+            predictions_op = self.build_model(features, labels, ModelMode.PREDICT)
+
+            # Restore latest checkpoint
+            checkpoint_dir = os.path.join(model_directory, 'checkpoints')
+            checkpoint_file = tf.train.latest_checkpoint(checkpoint_dir)
+            if checkpoint_file is None:
+                raise ValueError("No checkpoints found in the model directory.")
+
+            print("Restoring checkpoint: %s" % checkpoint_file)
+            saver = tf.train.Saver()
+            saver.restore(sess, checkpoint_file)
+
+            # Predict
+            predictions_list = []
+            while True:
+                try:
+                    predictions = sess.run(predictions_op)
+                    predictions_list.append(predictions)
+                except tf.errors.OutOfRangeError:
+                    break
+
+            return predictions_list
