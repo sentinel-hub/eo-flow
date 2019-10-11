@@ -28,7 +28,7 @@ class TrainTask(BaseTask):
 
         model_input = cls(config)
 
-        dataset_fn = lambda: model_input.get_dataset()
+        dataset_fn = model_input.get_dataset
         return dataset_fn
 
     def run(self):
