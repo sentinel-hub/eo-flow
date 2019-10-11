@@ -132,6 +132,12 @@ class BaseModel(Configurable):
             checkpoint_path = os.path.join(checkpoint_dir, 'model.ckpt')
             saver = tf.train.Saver()
 
+            # Restore latest checkpoint if it exits
+            checkpoint_file = tf.train.latest_checkpoint(checkpoint_dir)
+            if checkpoint_file is not None:
+                print("Restoring checkpoint: %s" % checkpoint_file)
+                saver.restore(sess, checkpoint_file)
+
             # Create summary writer
             create_dirs([checkpoint_dir])
             summary_writer = tf.summary.FileWriter(output_directory, sess.graph)
