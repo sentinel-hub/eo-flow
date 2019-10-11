@@ -141,30 +141,39 @@ class BaseModel(Configurable):
             sess.run(initializer)
 
             # Train
-            training_step = 1
-            for e in range(num_epochs):
-                sess.run(iterator.initializer)
-                print("Epoch %d/%d" % (e+1, num_epochs))
+            try:
+                training_step = 1
+                for e in range(num_epochs):
+                    sess.run(iterator.initializer)
+                    print("Epoch %d/%d" % (e+1, num_epochs))
 
-                while True:
-                    try:
-                        # Compute and record summaries every summary_steps
-                        if training_step % summary_steps == 0:
-                            _, loss, step, summaries = sess.run([train_op, loss_op, step_tensor, summaries_op])
+                    while True:
+                        try:
+                            # Compute and record summaries every summary_steps
+                            if training_step % summary_steps == 0:
+                                _, loss, step, summaries = sess.run([train_op, loss_op, step_tensor, summaries_op])
 
-                            summary_writer.add_summary(summaries, global_step=step)
-                        else:
-                            _, loss, step = sess.run([train_op, loss_op, step_tensor])
+                                summary_writer.add_summary(summaries, global_step=step)
+                            else:
+                                _, loss, step = sess.run([train_op, loss_op, step_tensor])
 
-                        # Show progress
-                        if training_step % progress_steps == 0:
-                            print("Step %d: %f" % (step, loss))
+                            # Show progress
+                            if training_step % progress_steps == 0:
+                                print("Step %d: %f" % (step, loss))
 
-                        # Model saving
-                        if training_step % save_steps == 0:
-                            print("Saving checkpoint at step %d." % step)
-                            saver.save(sess, checkpoint_path, global_step=step)
+                            # Model saving
+                            if training_step % save_steps == 0:
+                                print("Saving checkpoint at step %d." % step)
+                                saver.save(sess, checkpoint_path, global_step=step)
 
-                        training_step += 1
-                    except tf.errors.OutOfRangeError:
-                        break
+                            training_step += 1
+                        except tf.errors.OutOfRangeError:
+                            break
+
+            # Catch user interrupt
+            except KeyboardInterrupt:
+                print("Training interrupted by user.")
+
+            # Save at the end of training
+            print("Saving checkpoint at step %d." % step)
+            saver.save(sess, checkpoint_path, global_step=step)
