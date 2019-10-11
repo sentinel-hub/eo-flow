@@ -112,6 +112,24 @@ class BaseModel(Configurable):
         raise NotImplementedError
 
     def train(self, dataset_fn, num_epochs, output_directory, save_steps=100, summary_steps=10, progress_steps=10):
+        """ Trains the model on a given dataset. Takes care of saving the model and recording summaries.
+
+        :param dataset_fn: A function that builds and returns a tf.data.Dataset containing the input training data.
+            The dataset must be of shape (features, labels) where features and labels contain the data
+            in the shape required by the model.
+        :type dataset_fn: function
+        :param num_epochs: Number of epochs.
+        :type num_epochs: int
+        :param output_directory: Output directory, where the model checkpoints and summaries are saved.
+        :type output_directory: str
+        :param save_steps: Number of steps between saving model checkpoints.
+        :type save_steps: int
+        :param summary_steps: Number of steps between recodring summaries.
+        :type summary_steps: int
+        :param progress_steps: Number of steps between outputing progress to stdout.
+        :type progress_steps: int
+        """
+        
         # Clear graph
         tf.reset_default_graph()
 
