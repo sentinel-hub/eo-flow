@@ -4,6 +4,7 @@ import os
 from enum import Enum
 
 from . import Configurable
+from ..utils import create_dirs
 
 class ModelMode(Enum):
     TRAIN = 1
@@ -18,30 +19,7 @@ class BaseModel(Configurable):
 
         self.summaries = []
 
-        # init the global step
-        self.init_global_step()
-        # init the epoch counter
-        self.init_cur_epoch()
-
-    # save function that saves the checkpoint in the path defined in the config file
-    def save(self, sess):
-        self.saver.save(sess, self.config.checkpoint_dir, self.global_step_tensor)
-        logging.info("Model saved")
-
-    # load latest checkpoint from the experiment path defined in the config file
-    def load(self, sess):
-        latest_checkpoint = tf.train.latest_checkpoint(self.config.checkpoint_dir)
-        if latest_checkpoint:
-            self.saver.restore(sess, latest_checkpoint)
-            logging.info("Model loaded from checkpoint {}".format(latest_checkpoint))
-
-    # just initialize a tensorflow variable to use it as epoch counter
-    def init_cur_epoch(self):
-        with tf.variable_scope('cur_epoch'):
-            self.cur_epoch_tensor = tf.Variable(0, trainable=False, name='cur_epoch')
-            self.increment_cur_epoch_tensor = tf.assign(self.cur_epoch_tensor, self.cur_epoch_tensor + 1)
-
-    # just initialize a tensorflow variable to use it as global step counter
+    # Initialize a tensorflow variable to use it as global step counter
     def init_global_step(self):
         # DON'T forget to add the global step tensor to the tensorflow trainer
         with tf.variable_scope('global_step'):
@@ -95,14 +73,9 @@ class BaseModel(Configurable):
         else:
             return tf.constant("")
 
-    def init_saver(self):
-        # just copy the following line in your child class
-        # self.saver = tf.train.Saver(max_to_keep=self.config.max_to_keep)
-        raise NotImplementedError
-
     def build_model(self, features, labels, mode):
         """Builds the model for the provided input features and labels.
-        
+
         :param features: Input features tensor. Can be a single tensor or a dict of tensors.
         :type features: tf.tensor | dict(str, tf.tensor)
         :param labels: Labels tensor. Can be a single tensor or a dict of tensors.
@@ -111,3 +84,94 @@ class BaseModel(Configurable):
         :type mode: eoflow.base.ModelMode
         """
         raise NotImplementedError
+
+    def train(self, dataset_fn, num_epochs, output_directory, save_steps=100, summary_steps=10, progress_steps=10):
+        """ Trains the model on a given dataset. Takes care of saving the model and recording summaries.
+
+        :param dataset_fn: A function that builds and returns a tf.data.Dataset containing the input training data.
+            The dataset must be of shape (features, labels) where features and labels contain the data
+            in the shape required by the model.
+        :type dataset_fn: function
+        :param num_epochs: Number of epochs.
+        :type num_epochs: int
+        :param output_directory: Output directory, where the model checkpoints and summaries are saved.
+        :type output_directory: str
+        :param save_steps: Number of steps between saving model checkpoints.
+        :type save_steps: int
+        :param summary_steps: Number of steps between recodring summaries.
+        :type summary_steps: int
+        :param progress_steps: Number of steps between outputing progress to stdout.
+        :type progress_steps: int
+        """
+        
+        # Clear graph
+        tf.reset_default_graph()
+
+        with tf.Session() as sess:
+            # Build the dataset
+            dataset = dataset_fn()
+            iterator = dataset.make_initializable_iterator()
+            features, labels = iterator.get_next()
+
+            # Build model
+            self.init_global_step()
+            train_op, loss_op, summaries_op = self.build_model(features, labels, ModelMode.TRAIN)
+
+            # Create saver
+            step_tensor = self.global_step_tensor
+            checkpoint_dir = os.path.join(output_directory, 'checkpoints')
+            create_dirs([checkpoint_dir])
+            checkpoint_path = os.path.join(checkpoint_dir, 'model.ckpt')
+            saver = tf.train.Saver()
+
+            # Restore latest checkpoint if it exits
+            checkpoint_file = tf.train.latest_checkpoint(checkpoint_dir)
+            if checkpoint_file is not None:
+                print("Restoring checkpoint: %s" % checkpoint_file)
+                saver.restore(sess, checkpoint_file)
+
+            # Create summary writer
+            create_dirs([checkpoint_dir])
+            summary_writer = tf.summary.FileWriter(output_directory, sess.graph)
+
+            # Initialize variables
+            initializer = tf.global_variables_initializer()
+            sess.run(initializer)
+
+            # Train
+            try:
+                training_step = 1
+                for e in range(num_epochs):
+                    sess.run(iterator.initializer)
+                    print("Epoch %d/%d" % (e+1, num_epochs))
+
+                    while True:
+                        try:
+                            # Compute and record summaries every summary_steps
+                            if training_step % summary_steps == 0:
+                                _, loss, step, summaries = sess.run([train_op, loss_op, step_tensor, summaries_op])
+
+                                summary_writer.add_summary(summaries, global_step=step)
+                            else:
+                                _, loss, step = sess.run([train_op, loss_op, step_tensor])
+
+                            # Show progress
+                            if training_step % progress_steps == 0:
+                                print("Step %d: %f" % (step, loss))
+
+                            # Model saving
+                            if training_step % save_steps == 0:
+                                print("Saving checkpoint at step %d." % step)
+                                saver.save(sess, checkpoint_path, global_step=step)
+
+                            training_step += 1
+                        except tf.errors.OutOfRangeError:
+                            break
+
+            # Catch user interrupt
+            except KeyboardInterrupt:
+                print("Training interrupted by user.")
+
+            # Save at the end of training
+            print("Saving checkpoint at step %d." % step)
+            saver.save(sess, checkpoint_path, global_step=step)

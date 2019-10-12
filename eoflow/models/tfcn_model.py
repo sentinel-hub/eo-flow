@@ -40,6 +40,8 @@ class TFCNModel(BaseModel):
         loss = fields.String(missing='cross-entropy', description='Loss function used in training.',
                              validate=OneOf(['cross-entropy', 'iou', 'combined']))
 
+        image_summaries = fields.Bool(missing=False, description='Record images summaries.')
+
     def _net(self, x, is_training):
 
         net = x
@@ -154,9 +156,18 @@ class TFCNModel(BaseModel):
         preds = tf.argmax(probs[..., 1:], 3)
 
         if mode == ModelMode.TRAIN:
+            out_shape = tf.shape(logits)
+            labels_cropped = tf.image.resize_with_crop_or_pad(labels, out_shape[1], out_shape[2])
+
+            if self.config.image_summaries:
+                self.add_summary(tf.summary.image('input', features[:,0,...][...,0:3]))
+                self.add_summary(tf.summary.image('labels_raw', labels[...,0:3]))
+                self.add_summary(tf.summary.image('labels', labels_cropped[...,0:3]))
+                self.add_summary(tf.summary.image('output', logits[...,0:3]))
+
             # flatten tensors to apply class weighting
             flat_logits = tf.reshape(logits, [-1, self.config.n_classes])
-            flat_labels = tf.reshape(labels, [-1, self.config.n_classes])
+            flat_labels = tf.reshape(labels_cropped, [-1, self.config.n_classes])
 
             # cross-entropy loss w or w/o class weights
             if self.config.class_weights is not None:
@@ -165,7 +176,7 @@ class TFCNModel(BaseModel):
                 cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=flat_logits,
                                                                                             labels=flat_labels))
             # intersection over union loss
-            iou_loss = compute_iou_loss(self.config.n_classes, probs, preds, tf.cast(labels, tf.float32),
+            iou_loss = compute_iou_loss(self.config.n_classes, probs, preds, tf.cast(labels_cropped, tf.float32),
                                         class_weights=self.config.class_weights, exclude_background=False)
 
             # Total loss, which is cross-entropy, IOU or a sum of the two
@@ -175,6 +186,8 @@ class TFCNModel(BaseModel):
                 loss = iou_loss
             elif self.config.loss == 'combined':
                 loss = cross_entropy_loss + iou_loss
+
+            self.add_summary(tf.summary.scalar('loss', loss))
 
             # update operations for batch-normalisation and define train stepo as minimisation of loss
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)

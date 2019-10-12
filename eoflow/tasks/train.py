@@ -28,61 +28,16 @@ class TrainTask(BaseTask):
 
         model_input = cls(config)
 
-        dataset = model_input.get_dataset()
-        return dataset
+        dataset_fn = model_input.get_dataset
+        return dataset_fn
 
     def run(self):
-        # TODO: session configuration
-        with tf.Session() as sess: 
-            # Parse model input
-            dataset = self.parse_input()
-
-            iterator = dataset.make_initializable_iterator()
-            features, labels = iterator.get_next()
-
-            # Build model
-            train_op, loss_op, summaries_op = self.model.build_model(features, labels, ModelMode.TRAIN)
-
-            # Create saver
-            step_tensor = self.model.global_step_tensor
-            checkpoint_dir = os.path.join(self.config.output_directory, 'checkpoints')
-            create_dirs([checkpoint_dir])
-            checkpoint_path = os.path.join(checkpoint_dir, 'model.ckpt')
-            saver = tf.train.Saver()
-
-            # Create summary writer
-            create_dirs([checkpoint_dir])
-            summary_writer = tf.summary.FileWriter(self.config.output_directory, sess.graph)
-
-            # Initialize variables
-            initializer = tf.global_variables_initializer()
-            sess.run(initializer)
-
-            # Train
-            training_step = 1
-            for e in range(self.config.num_epochs):
-                sess.run(iterator.initializer)
-                print("Epoch %d/%d" % (e+1, self.config.num_epochs))
-
-                while True:
-                    try:
-                        # Compute and record summaries every summary_steps
-                        if training_step % self.config.summary_steps == 0:
-                            _, loss, step, summaries = sess.run([train_op, loss_op, step_tensor, summaries_op])
-
-                            summary_writer.add_summary(summaries, global_step=step)
-                        else:
-                            _, loss, step = sess.run([train_op, loss_op, step_tensor])
-
-                        # Show progress
-                        if training_step % self.config.progress_steps == 0:
-                            print("Step %d: %f" % (step, loss))
-
-                        # Model saving
-                        if training_step % self.config.save_steps == 0:
-                            print("Saving checkpoint at step %d." % step)
-                            saver.save(sess, checkpoint_path, global_step=step)
-
-                        training_step += 1
-                    except tf.errors.OutOfRangeError:
-                        break
+        dataset_fn = self.parse_input()
+        
+        self.model.train(dataset_fn,
+                         num_epochs=self.config.num_epochs,
+                         output_directory=self.config.output_directory,
+                         save_steps=self.config.save_steps,
+                         summary_steps=self.config.summary_steps,
+                         progress_steps=self.config.progress_steps
+                         )
