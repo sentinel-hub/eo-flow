@@ -1,0 +1,17 @@
+# pyc files
+*.pyc
+
+# VS files
+.vscode/
+
+# temp output folder
+temp/
+
+# pycharm files
+.idea/
+
+# egg folder
+*.egg-info/
+
+# Jupyter checkpoints
+.ipynb_checkpoints

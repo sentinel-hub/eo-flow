@@ -1,0 +1,57 @@
+{
+    "model": {
+        "classname": "eoflow.models.TFCNModel",
+        "config": {
+            "learning_rate": 0.0001,
+            "n_layers": 3,
+            "n_classes": 10,
+            "keep_prob": 0.8,
+            "features_root": 16,
+            "conv_size": 3,
+            "conv_stride": 1,
+            "deconv_size": 2,
+            "add_dropout": true,
+            "add_batch_norm": false,
+            "bias_init": 0.0,
+            "padding": "VALID",
+            "pool_size": 2,
+            "pool_stride": 2,
+            "pool_time": false,
+            "single_encoding_conv": true,
+            "conv_size_reduce": 3,
+            "loss": "cross-entropy",
+            "image_summaries": true
+        }
+    },
+    "task": {
+        "classname": "eoflow.tasks.TrainTask",
+        "config": {
+            "num_epochs": 5,
+            "output_directory": "./temp/tfcn_svn_lulc",
+            "input_config":{
+                "classname": "eoflow.input.eopatch.EOPatchInputExample",
+                "config": {
+                    "data_dir": "/storage/jupyter/data/svn_lulc/data/train-val-linear-v01-aws/train",
+                    "input_feature_type": "data",
+                    "input_feature_name": "FEATURES",
+                    "input_feature_axis": [1,2],
+                    "input_feature_shape": [23, -1, -1, 9],
+                    "labels_feature_type": "mask_timeless",
+                    "labels_feature_name": "LULC_RABA",
+                    "labels_feature_axis": [0,1],
+                    "labels_feature_shape": [-1, -1, 1],
+                    "patch_size": [128, 128],
+                    "interleave_size": 3,
+                    "batch_size": 5,
+                    "num_classes": 10,
+                    "cache_file": "./temp/tfcn_svn_lulc/dataset/cache",
+                    "num_subpatches": 5
+                }
+            },
+            "save_steps": 100,
+            "summary_steps": 10,
+            "progress_steps": 1
+        }
+    }
+  }
+  

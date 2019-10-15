@@ -6,11 +6,15 @@ import os
 import concurrent.futures
 from tqdm.auto import tqdm
 import numpy as np
+import tensorflow as tf
 
 from scipy.ndimage.morphology import binary_erosion
 from skimage.morphology import disk
+from marshmallow import Schema, fields
 
 from .jittering import tasks, jitter_axes_4d
+
+from eoflow.base import BaseInput
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
@@ -104,28 +108,6 @@ class DataGenerator:
             label[..., n_class] = binary_erosion(label[..., n_class], structure=disk(radius))
         label[..., 0] = np.where(np.sum(label, axis=-1) == 0, 1, label[..., 0])
         return label
-
-
-class ExampleDataGenerator:
-    """ Class to create random example batches """
-
-    def __init__(self, config):
-        self.config = config
-        self.state_size = config.state_size
-
-    def next_batch(self, batch_size):
-        i_s = [batch_size] + self.state_size
-        l_s = [batch_size, 10]
-
-        # input data
-        input_data = np.random.rand(*i_s)
-
-        # one hot labels
-        I = np.eye(10)
-        indices = np.random.randint(10, size=batch_size)
-        labels = I[indices]
-
-        yield input_data, labels
 
 
 class MultiTempBatchGenerator(DataGenerator):
