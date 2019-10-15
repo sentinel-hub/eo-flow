@@ -10,11 +10,11 @@ from .operations import extract_subpatches, augment_data, cache_dataset
 
 _valid_types = [t.value for t in FeatureType]
 
-def eopatch_dataset(data_dir, features_data, fill_na=None):
+def eopatch_dataset(root_dir_or_list, features_data, fill_na=None):
     """ Reads a features and labels from a single EOPatch.
 
-    :param data_dir: Root directory containing eopatches in the dataset
-    :type data_dir: str
+    :param data_dir_or_list: Root directory containing eopatches or a list of eopatch directories.
+    :type data_dir_or_list: str or list(str)
     :param features_data: List of tuples containing data about features to extract.
         Tuple structure: (feature_type, feature_name, out_feature_name, feature_dtype, feature_shape)
     :type features_data: (str, str, str, np.dtype, tuple)
@@ -22,8 +22,11 @@ def eopatch_dataset(data_dir, features_data, fill_na=None):
     :type fill_na: int
     """
 
-    file_pattern = os.path.join(data_dir, '*')
-    dataset = tf.data.Dataset.list_files(file_pattern)
+    if isinstance(root_dir_or_list, str):
+        file_pattern = os.path.join(root_dir_or_list, '*')
+        dataset = tf.data.Dataset.list_files(file_pattern)
+    else:
+        dataset = tf.data.Dataset.from_tensor_slices(root_dir_or_list)
 
     def _read_patch(path):
         """ TF op for reading an eopatch at a given path. """
