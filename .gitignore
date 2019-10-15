@@ -12,3 +12,6 @@ temp/
 
 # egg folder
 *.egg-info/
+
+# Jupyter checkpoints
+.ipynb_checkpoints
