@@ -11,7 +11,7 @@ from .operations import extract_subpatches, augment_data, cache_dataset
 _valid_types = [t.value for t in FeatureType]
 
 def eopatch_dataset(root_dir_or_list, features_data, fill_na=None):
-    """ Reads a features and labels from a single EOPatch.
+    """ Creates a tf dataset with features from saved EOPatches.
 
     :param data_dir_or_list: Root directory containing eopatches or a list of eopatch directories.
     :type data_dir_or_list: str or list(str)
