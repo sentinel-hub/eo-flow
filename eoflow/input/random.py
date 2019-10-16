@@ -5,7 +5,7 @@ from marshmallow import fields, Schema
 from ..base import BaseInput
 
 class RandomClassificationInput(BaseInput):
-    """ Class to create random batches for classification tasks. """
+    """ Class to create random batches for classification tasks. Can be used for prototyping. """
 
     class _Schema(Schema):
         input_shape = fields.List(fields.Int, description="Shape of a single input example.", required=True, example=[784])
@@ -40,7 +40,7 @@ class RandomClassificationInput(BaseInput):
 
 
 class RandomSegmentationInput(BaseInput):
-    """ Class to create random batches for segmentation tasks. """
+    """ Class to create random batches for segmentation tasks. Can be used for prototyping. """
 
     class _Schema(Schema):
         input_shape = fields.List(fields.Int, description="Shape of a single input example.", required=True, example=[512,512,3])
