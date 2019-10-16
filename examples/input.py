@@ -10,8 +10,46 @@ from eoflow.input.operations import extract_subpatches, augment_data, cache_data
 
 _valid_types = [t.value for t in FeatureType]
 
+class ExampleInput(BaseInput):
+    """ A simple example of an Input class. Produces random data. """
+
+    class _Schema(Schema):
+        input_shape = fields.List(fields.Int, description="Shape of a single input example.", required=True, example=[784])
+        num_classes = fields.Int(description="Number of classes.", required=True, example=10)
+
+        batch_size = fields.Int(description="Number of examples in a batch.", required=True, example=20)
+        batches_per_epoch = fields.Int(required=True, description='Number of batches in epoch', example=20)
+
+    def _generate_batch(self):
+        """ Generator that returns random features and labels. """
+        
+        for i in range(self.config.batches_per_epoch):
+            input_shape = [self.config.batch_size] + self.config.input_shape
+            input_data = np.random.rand(*input_shape)
+
+            onehot = np.eye(self.config.num_classes)
+            output_shape = [self.config.batch_size]
+            classes = np.random.randint(self.config.num_classes, size=output_shape)
+            labels = onehot[classes]
+
+            yield input_data, labels
+
+    def get_dataset(self):
+        input_shape = [self.config.batch_size] + self.config.input_shape
+        output_shape = [self.config.batch_size, self.config.num_classes]
+
+        # Create a tf dataset from a np.array generator
+        dataset = tf.data.Dataset.from_generator(
+            self._generate_batch,
+            (tf.float32, tf.float32),
+            (tf.TensorShape(input_shape), tf.TensorShape(output_shape))
+        )
+
+        return dataset
+
+
 class EOPatchInputExample(BaseInput):
-    """ An example input method. Shows reading EOPatches, subpatch extraction, data augmentation, caching, batching, etc. """
+    """ An example input method for EOPatches. Shows feature reading, subpatch extraction, data augmentation, caching, batching, etc. """
 
     # Configuration schema (extended from EOPatchSegmentationInput)
     class _Schema(EOPatchSegmentationInput._Schema):
