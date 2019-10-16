@@ -1,6 +1,6 @@
 {
     "model": {
-        "classname": "eoflow.models.ExampleModel",
+        "classname": "examples.models.ExampleModel",
         "config": {
             "output_size": 10,
             "hidden_units": 256,
