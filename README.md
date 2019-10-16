@@ -41,9 +41,9 @@ Project also contains other folders:
 
 ## Example files
 
-Implementations in files `eoflow/models/example_model.py` and `eoflow/input/random.py` are available as guidelines on how the methods for how **models** and **input** should be implemented.
+Implementations in files `examples/models.py` and `examples/input.py` are available as guidelines on how the configurable classes for **models** and **input** should be implemented.
 
-A toy example using the example model is configured in the`configs/example.json` configuration file.
+A toy example using the example model and input is configured in the`configs/example.json` configuration file.
 
 To run the example, run
 ```
