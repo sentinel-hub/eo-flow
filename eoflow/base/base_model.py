@@ -14,10 +14,14 @@ class ModelMode(Enum):
 
 class BaseModel(Configurable):
 
+    METRICS_NAME_SCOPE = 'metrics'
+
     def __init__(self, config_specs):
         super().__init__(config_specs)
 
-        self.summaries = []
+        self.training_summaries = []
+        self.validation_summaries = []
+        self.validation_update_ops = []
 
     # Initialize a tensorflow variable to use it as global step counter
     def init_global_step(self):
@@ -25,51 +29,50 @@ class BaseModel(Configurable):
         with tf.variable_scope('global_step'):
             self.global_step_tensor = tf.Variable(0, trainable=False, name='global_step')
 
-    def freeze_graph(self):
-        """ Extract the sub graph defined by the output nodes and convert all its variables into constant
+    def clear_graph(self):
+        tf.reset_default_graph()
+        self.training_summaries = []
+        self.validation_summaries = []
+        self.validation_update_ops = []
 
-            Freezes and saves model as proto-buffer file (e.g. model.pb). The name of the output layers (if more than
-            one) of the network need to be specified (e.g. "Softmax").
-        """
-        if not tf.gfile.Exists(self.config.checkpoint_dir):
-            raise AssertionError("Export directory {:s} doesn't exists.".format(self.config.checkpoint_dir))
-        if not self.config.node_names:
-            raise ValueError("You need to supply the name of a node.")
-        # We retrieve our checkpoint fullpath
-        checkpoint = tf.train.get_checkpoint_state(self.config.checkpoint_dir)
-        input_checkpoint = checkpoint.model_checkpoint_path
-        # We precise the file fullname of our freezed graph
-        output_graph = "/".join(input_checkpoint.split('/')[:-1]) + os.sep + self.config.model_name
-
-        # We start a session using a temporary fresh Graph
-        with tf.Session(graph=tf.Graph()) as sess:
-            # We import the meta graph in the current default Graph
-            saver = tf.train.import_meta_graph(input_checkpoint + '.meta', clear_devices=True)
-            # We restore the weights
-            saver.restore(sess, input_checkpoint)
-            # nodes = [n.name for n in tf.get_default_graph().as_graph_def().node]
-            # print(nodes)
-            # We use a built-in TF helper to export variables to constants
-            output_graph_def = tf.graph_util.convert_variables_to_constants(
-                sess,  # The session is used to retrieve the weights
-                tf.get_default_graph().as_graph_def(),  # The graph_def is used to retrieve the nodes
-                self.config.node_names.split(",")  # The output node names are used to select the useful nodes
-            )
-
-            # Finally we serialize and dump the output graph to the filesystem
-            with tf.gfile.GFile(output_graph, "wb") as f:
-                f.write(output_graph_def.SerializeToString())
-
-    def add_summary(self, summary):
+    def add_training_summary(self, summary):
         """Adds a summary to the list of recorded summaries."""
 
-        self.summaries.append(summary)
+        self.training_summaries.append(summary)
 
-    def get_merged_summaries(self):
+    def add_validation_metric(self, metric_fn, name):
+        """Adds a summary to the list of recorded summaries."""
+
+        with tf.name_scope(self.METRICS_NAME_SCOPE):
+            metric_val, metric_update_op = metric_fn()
+
+        self.validation_update_ops.append(metric_update_op)
+
+        summary = tf.summary.scalar(name, metric_val)
+        self.validation_summaries.append(summary)
+
+    def get_merged_training_summaries(self):
         """Merges all the specified summaries and returns the merged summary tensor."""
 
-        if len(self.summaries) > 0:
-            return tf.summary.merge(self.summaries)
+        if len(self.training_summaries) > 0:
+            return tf.summary.merge(self.training_summaries)
+        else:
+            return tf.constant("")
+
+    def get_validation_update_op(self):
+        return tf.group(*self.validation_update_ops)
+
+    def get_validation_init_op(self):
+        variables = tf.get_collection(tf.GraphKeys.LOCAL_VARIABLES, scope=self.METRICS_NAME_SCOPE)
+        init_op = tf.variables_initializer(variables, 'validation_init')
+
+        return init_op
+
+    def get_merged_validation_summaries(self):
+        """Merges all the specified summaries and returns the merged summary tensor."""
+
+        if len(self.validation_summaries) > 0:
+            return tf.summary.merge(self.validation_summaries)
         else:
             return tf.constant("")
 
@@ -105,7 +108,7 @@ class BaseModel(Configurable):
         """
 
         # Clear graph
-        tf.reset_default_graph()
+        self.clear_graph()
 
         with tf.Session() as sess:
             # Build the dataset
@@ -188,7 +191,7 @@ class BaseModel(Configurable):
         :rtype: list
         """
         # Clear graph
-        tf.reset_default_graph()
+        self.clear_graph()
 
         with tf.Session() as sess:
             # Build the dataset
