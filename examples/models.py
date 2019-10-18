@@ -20,7 +20,7 @@ class ExampleModel(BaseModel):
         d1 = tf.layers.dense(x, self.config.hidden_units, activation=tf.nn.relu, name="dense1")
         d2 = tf.layers.dense(d1, self.config.output_size, name="dense2")
 
-        # Build the model for training
+        # Build the head for training
         if ModelHeads.TRAIN in model_heads:
             # Compute loss and create a training op
             with tf.name_scope("loss"):
@@ -33,7 +33,7 @@ class ExampleModel(BaseModel):
                 
                 train_head = ModelHeads.TrainHead(train_op, loss, self.get_merged_training_summaries())
 
-        # Build the model for prediction (no loss computation)
+        # Build the head for prediction (no loss computation)
         if ModelHeads.PREDICT in model_heads:
             # Compute predictions
             probabilities = tf.nn.softmax(d2)
@@ -47,6 +47,7 @@ class ExampleModel(BaseModel):
 
             predict_head = ModelHeads.PredictHead(predictions)
 
+        # Build the head for evaluation
         if ModelHeads.EVALUATE in model_heads:
             # Compute predictions
             probabilities = tf.nn.softmax(d2)
@@ -64,6 +65,7 @@ class ExampleModel(BaseModel):
             )
 
 
+        # Return requested heads in a list
         heads = []
         for model_head in model_heads:
             if model_head == ModelHeads.TRAIN:
