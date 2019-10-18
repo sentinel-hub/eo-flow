@@ -1,2 +1,2 @@
-from .train import TrainTask
+from .train import TrainTask, TrainAndEvaluateTask
 from .predict import PredictTask
