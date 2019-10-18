@@ -1,4 +1,4 @@
-from eoflow.base import BaseModel, ModelMode
+from eoflow.base import BaseModel, ModelHeads
 import tensorflow as tf
 
 from marshmallow import Schema, fields
@@ -13,7 +13,7 @@ class ExampleModel(BaseModel):
         hidden_units = fields.Int(missing=512, description='Number of hidden units', example=512)
         learning_rate = fields.Float(required=True, description='Learning rate used', example=0.01)
 
-    def build_model(self, features, labels, mode):
+    def build_model(self, features, labels, is_train_tensor, model_heads):
         x = features
         
         # Build the network
@@ -21,7 +21,7 @@ class ExampleModel(BaseModel):
         d2 = tf.layers.dense(d1, self.config.output_size, name="dense2")
 
         # Build the model for training
-        if mode == ModelMode.TRAIN:
+        if ModelHeads.TRAIN in model_heads:
             # Compute loss and create a training op
             with tf.name_scope("loss"):
                 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=d2))
@@ -29,14 +29,14 @@ class ExampleModel(BaseModel):
                 train_op = optimizer.minimize(loss, global_step=self.global_step_tensor)
 
                 # Add summary for loss
-                self.add_summary(tf.summary.scalar('loss', loss))
+                self.add_training_summary(tf.summary.scalar('loss', loss))
                 
-                return train_op, loss, self.get_merged_summaries()
+                train_head = ModelHeads.TrainHead(train_op, loss, self.get_merged_training_summaries())
 
         # Build the model for prediction (no loss computation)
-        elif mode == ModelMode.PREDICT:
+        if ModelHeads.PREDICT in model_heads:
             # Compute predictions
-            probabilities = tf.softmax(d2)
+            probabilities = tf.nn.softmax(d2)
             predictions = tf.argmax(probabilities, axis=1)
 
             # Define the output of the prediction. Here a dict is used.
@@ -45,6 +45,34 @@ class ExampleModel(BaseModel):
                 'probabilities': probabilities
             }
 
-            return predictions
-        else:
-            raise NotImplementedError
+            predict_head = ModelHeads.PredictHead(predictions)
+
+        if ModelHeads.EVALUATE in model_heads:
+            # Compute predictions
+            probabilities = tf.nn.softmax(d2)
+            predictions = tf.argmax(probabilities, axis=1)
+
+            labels_n = tf.argmax(labels, axis=1)
+            accuracy_metric_fn = lambda: tf.metrics.accuracy(labels_n, predictions)
+
+            self.add_validation_metric(accuracy_metric_fn, 'accuracy')
+
+            evaluate_head = ModelHeads.EvaluateHead(
+                self.get_validation_init_op(),
+                self.get_validation_update_op(),
+                self.get_merged_validation_summaries()
+            )
+
+
+        heads = []
+        for model_head in model_heads:
+            if model_head == ModelHeads.TRAIN:
+                heads.append(train_head)
+            elif model_head == ModelHeads.PREDICT:
+                heads.append(predict_head)
+            elif model_head == ModelHeads.EVALUATE:
+                heads.append(evaluate_head)
+            else:
+                raise NotImplementedError
+
+        return heads
