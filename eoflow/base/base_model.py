@@ -4,13 +4,28 @@ import os
 from enum import Enum
 
 from . import Configurable
-from ..utils import create_dirs
+from ..utils import create_dirs, get_common_shape
 
-class ModelMode(Enum):
+class ModelHeads():
     TRAIN = 1
     EVALUATE = 2
     PREDICT = 3
-    EXPORT = 4
+
+    class TrainHead:
+        def __init__(self, train_op, loss_op, summaries_op):
+            self.train_op = train_op
+            self.loss_op = loss_op
+            self.summaries_op = summaries_op
+    
+    class EvaluateHead:
+        def __init__(self, metric_init_op, metric_update_op, metric_summaries_op):
+            self.metric_init_op = metric_init_op
+            self.metric_update_op = metric_update_op
+            self.metric_summaries_op = metric_summaries_op
+
+    class PredictHead:
+        def __init__(self, prediction_op):
+            self.prediction_op = prediction_op
 
 class BaseModel(Configurable):
 
@@ -76,15 +91,17 @@ class BaseModel(Configurable):
         else:
             return tf.constant("")
 
-    def build_model(self, features, labels, mode):
+    def build_model(self, features, labels, is_train_tensor, model_heads):
         """Builds the model for the provided input features and labels.
 
         :param features: Input features tensor. Can be a single tensor or a dict of tensors.
         :type features: tf.tensor | dict(str, tf.tensor)
         :param labels: Labels tensor. Can be a single tensor or a dict of tensors.
         :type labels: tf.tensor | dict(str, tf.tensor)
-        :param mode: Mode to use for building the model
-        :type mode: eoflow.base.ModelMode
+        :param model_heads: List of model heads to build and return
+        :type mode: list(ModelHeads)
+        :param is_train_tensor: bool tensor specifying the mode of the network (training or predicting).
+        :type is_train_tensor: tf.Tensor
         """
         raise NotImplementedError
 
@@ -118,7 +135,8 @@ class BaseModel(Configurable):
 
             # Build model
             self.init_global_step()
-            train_op, loss_op, summaries_op = self.build_model(features, labels, ModelMode.TRAIN)
+            is_train_tensor = tf.constant(True)
+            train_head = self.build_model(features, labels, is_train_tensor, [ModelHeads.TRAIN])[0]
 
             # Create saver
             step_tensor = self.global_step_tensor
@@ -152,11 +170,11 @@ class BaseModel(Configurable):
                         try:
                             # Compute and record summaries every summary_steps
                             if training_step % summary_steps == 0:
-                                _, loss, step, summaries = sess.run([train_op, loss_op, step_tensor, summaries_op])
+                                _, loss, step, summaries = sess.run([train_head.train_op, train_head.loss_op, step_tensor, train_head.summaries_op])
 
                                 summary_writer.add_summary(summaries, global_step=step)
                             else:
-                                _, loss, step = sess.run([train_op, loss_op, step_tensor])
+                                _, loss, step = sess.run([train_head.train_op, train_head.loss_op, step_tensor])
 
                             # Show progress
                             if training_step % progress_steps == 0:
@@ -178,6 +196,115 @@ class BaseModel(Configurable):
             # Save at the end of training
             print("Saving checkpoint at step %d." % step)
             saver.save(sess, checkpoint_path, global_step=step)
+
+    def train_and_validate(self, train_dataset_fn, val_dataset_fn, num_epochs, iterations_per_epoch, output_directory,
+                           save_steps=100, summary_steps=10, progress_steps=10, validation_step=10):
+        # Clear graph
+        self.clear_graph()
+
+        with tf.Session() as sess:
+            # Build the datasets
+            train_dataset = train_dataset_fn().repeat()
+            val_dataset = val_dataset_fn()
+
+            # Get common shape of the datasets (they may differ in batch size, etc.)
+            shapes_train = [shape.as_list() for shape in train_dataset.output_shapes]
+            shapes_val = [shape.as_list() for shape in val_dataset.output_shapes]
+            
+            common_shapes = tuple(get_common_shape(shape1, shape2) for shape1, shape2 in zip(shapes_train, shapes_val))
+
+            # Dataset selector placeholder
+            handle = tf.placeholder(tf.string, shape=[])
+
+            # Switchable iterator (can switch between train and val)
+            iterator = tf.data.Iterator.from_string_handle(
+                        handle, train_dataset.output_types, common_shapes)
+            features, labels = iterator.get_next()
+
+            # Get dataset iterators
+            train_iterator = train_dataset.make_one_shot_iterator()
+            val_iterator = val_dataset.make_initializable_iterator()
+
+            # Get handles to select which dataset iterator to use
+            train_handle = sess.run(train_iterator.string_handle())
+            val_handle = sess.run(val_iterator.string_handle())
+
+            # Build model
+            self.init_global_step()
+            is_train = tf.placeholder(tf.bool, shape=(), name='is_train')
+            train_head, eval_head = self.build_model(features, labels, is_train, [ModelHeads.TRAIN, ModelHeads.EVALUATE])
+
+            # Create saver
+            step_tensor = self.global_step_tensor
+            checkpoint_dir = os.path.join(output_directory, 'checkpoints')
+            create_dirs([checkpoint_dir])
+            checkpoint_path = os.path.join(checkpoint_dir, 'model.ckpt')
+            saver = tf.train.Saver()
+
+            # Restore latest checkpoint if it exits
+            checkpoint_file = tf.train.latest_checkpoint(checkpoint_dir)
+            if checkpoint_file is not None:
+                print("Restoring checkpoint: %s" % checkpoint_file)
+                saver.restore(sess, checkpoint_file)
+
+            # Create summary writer
+            create_dirs([checkpoint_dir])
+            train_summary_writer = tf.summary.FileWriter(os.path.join(output_directory, 'train'), sess.graph)
+            val_summary_writer = tf.summary.FileWriter(os.path.join(output_directory, 'val'))
+
+            # Initialize variables
+            initializer = tf.global_variables_initializer()
+            sess.run(initializer)
+
+            # Train
+            try:
+                training_step = 1
+                for e in range(num_epochs):
+                    
+                    print("Epoch %d/%d" % (e+1, num_epochs))
+
+                    print('Training...')
+                    # Train for iterations_per_epoch steps
+                    for _ in range(iterations_per_epoch):
+                        # Compute and record summaries every summary_steps
+                        if training_step % summary_steps == 0:
+                            _, loss, step, summaries = sess.run([train_head.train_op, train_head.loss_op, step_tensor, train_head.summaries_op], {handle: train_handle, is_train: True})
+
+                            train_summary_writer.add_summary(summaries, global_step=step)
+                        else:
+                            _, loss, step = sess.run([train_head.train_op, train_head.loss_op, step_tensor], {handle: train_handle, is_train: True})
+
+                        # Show progress
+                        if training_step % progress_steps == 0:
+                            print("Step %d: %f" % (step, loss))
+
+                        # Model saving
+                        if training_step % save_steps == 0:
+                            print("Saving checkpoint at step %d." % step)
+                            saver.save(sess, checkpoint_path, global_step=step)
+
+                        training_step += 1
+
+                    print('Evaluating...')
+                    # Evaluate at the end of each epoch
+                    sess.run(val_iterator.initializer)
+                    sess.run(eval_head.metric_init_op)
+                    while True:
+                        try:
+                            sess.run(eval_head.metric_update_op, {handle: val_handle, is_train: False})
+                        except tf.errors.OutOfRangeError:
+                            break
+                    val_summaries = sess.run(eval_head.metric_summaries_op)
+                    val_summary_writer.add_summary(val_summaries, global_step=step)
+                    
+            # Catch user interrupt
+            except KeyboardInterrupt:
+                print("Training interrupted by user.")
+
+            # Save at the end of training
+            print("Saving checkpoint at step %d." % step)
+            saver.save(sess, checkpoint_path, global_step=step)
+
 
     def predict(self, dataset_fn, model_directory):
         """ Runs the prediction on the model with the provided dataset
@@ -201,7 +328,8 @@ class BaseModel(Configurable):
 
             # Build model
             self.init_global_step()
-            predictions_op = self.build_model(features, labels, ModelMode.PREDICT)
+            is_train_tensor = tf.constant(False)
+            predictions_op = self.build_model(features, labels, is_train_tensor, [ModelHeads.PREDICT])
 
             # Restore latest checkpoint
             checkpoint_dir = os.path.join(model_directory, 'checkpoints')

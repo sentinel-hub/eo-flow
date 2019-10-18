@@ -3,7 +3,7 @@ import os
 import tensorflow as tf
 from marshmallow import Schema, fields
 
-from ..base import Configurable, BaseTask, BaseInput, ModelMode
+from ..base import Configurable, BaseTask, BaseInput
 from ..base.configuration import ObjectConfiguration
 from ..utils import parse_classname, create_dirs
 
