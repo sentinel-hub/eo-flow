@@ -1,0 +1,40 @@
+{
+    "model": {
+        "classname": "examples.models.ExampleModel",
+        "config": {
+            "output_size": 10,
+            "hidden_units": 256,
+            "learning_rate": 0.01
+        }
+    },
+    "task": {
+        "classname": "eoflow.tasks.TrainAndEvaluateTask",
+        "config": {
+            "num_epochs": 10,
+            "iterations_per_epoch": 1000,
+            "output_directory": "./temp/experiment",
+            "train_input_config":{
+                "classname": "examples.input.ExampleInput",
+                "config": {
+                    "input_shape": [512],
+                    "num_classes": 10,
+                    "batch_size": 20,
+                    "batches_per_epoch": 1000
+                }
+            },
+            "val_input_config":{
+                "classname": "examples.input.ExampleInput",
+                "config": {
+                    "input_shape": [512],
+                    "num_classes": 10,
+                    "batch_size": 1,
+                    "batches_per_epoch": 1000
+                }
+            },
+            "save_steps": 400,
+            "summary_steps": 50,
+            "progress_steps": 100
+        }
+    }
+  }
+  
