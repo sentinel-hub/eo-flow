@@ -197,7 +197,7 @@ class BaseModel(Configurable):
             print("Saving checkpoint at step %d." % step)
             saver.save(sess, checkpoint_path, global_step=step)
 
-    def train_and_validate(self, train_dataset_fn, val_dataset_fn, num_epochs, iterations_per_epoch, output_directory,
+    def train_and_evaluate(self, train_dataset_fn, val_dataset_fn, num_epochs, iterations_per_epoch, output_directory,
                            save_steps=100, summary_steps=10, progress_steps=10, validation_step=10):
         # Clear graph
         self.clear_graph()

@@ -72,7 +72,7 @@ class TrainAndEvaluateTask(BaseTask):
         train_dataset_fn = self.parse_input(self.config.train_input_config)
         val_dataset_fn = self.parse_input(self.config.val_input_config)
         
-        self.model.train_and_validate(
+        self.model.train_and_evaluate(
             train_dataset_fn, val_dataset_fn,
             num_epochs=self.config.num_epochs,
             iterations_per_epoch=self.config.iterations_per_epoch,
