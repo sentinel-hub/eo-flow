@@ -376,7 +376,7 @@ class BaseModel(Configurable):
             # Build model
             self.init_global_step()
             is_train_tensor = tf.constant(False)
-            predictions_op = self.build_model(features, labels, is_train_tensor, [ModelHeads.PREDICT])
+            predict_head = self.build_model(features, labels, is_train_tensor, [ModelHeads.PREDICT])[0]
 
             # Restore latest checkpoint
             checkpoint_dir = os.path.join(model_directory, 'checkpoints')
@@ -392,7 +392,7 @@ class BaseModel(Configurable):
             predictions_list = []
             while True:
                 try:
-                    predictions = sess.run(predictions_op)
+                    predictions = sess.run(predict_head.prediction_op)
                     predictions_list.append(predictions)
                 except tf.errors.OutOfRangeError:
                     break
