@@ -56,13 +56,15 @@ class ExampleModel(BaseModel):
             labels_n = tf.argmax(labels, axis=1)
             accuracy_metric_fn = lambda: tf.metrics.accuracy(labels_n, predictions)
 
+            # Adds a metric
             self.add_validation_metric(accuracy_metric_fn, 'accuracy')
 
-            evaluate_head = ModelHeads.EvaluateHead(
-                self.get_validation_init_op(),
-                self.get_validation_update_op(),
-                self.get_merged_validation_summaries()
-            )
+            # Automatically create init, update, summary, metric value ops for 
+            # metrics provided using the `add_validation_metric` method.
+            # Should fit most use cases, but allows extension with custom ops, summaries, etc.
+            evaluation_ops = self.get_merged_validation_ops()
+
+            evaluate_head = ModelHeads.EvaluateHead(*evaluation_ops)
 
 
         # Return requested heads in a list

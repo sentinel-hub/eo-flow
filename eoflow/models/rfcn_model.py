@@ -192,11 +192,8 @@ class RFCNModel(BaseModel):
 
             self.add_validation_metric(accuracy_fn, 'accuracy')
 
-            evaluate_head = ModelHeads.EvaluateHead(
-                self.get_validation_init_op(), 
-                self.get_validation_update_op(),
-                self.get_merged_validation_summaries()
-            )
+            evaluate_ops = self.get_merged_validation_ops()
+            evaluate_head = ModelHeads.EvaluateHead(*evaluate_ops)
 
         heads = []
         for model_head in model_heads:

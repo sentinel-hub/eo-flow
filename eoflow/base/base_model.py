@@ -18,10 +18,11 @@ class ModelHeads():
             self.summaries_op = summaries_op
     
     class EvaluateHead:
-        def __init__(self, metric_init_op, metric_update_op, metric_summaries_op):
+        def __init__(self, metric_init_op, metric_update_op, metric_summaries_op, metric_values_op_dict):
             self.metric_init_op = metric_init_op
             self.metric_update_op = metric_update_op
             self.metric_summaries_op = metric_summaries_op
+            self.metric_values_op_dict = metric_values_op_dict
 
     class PredictHead:
         def __init__(self, prediction_op):
@@ -36,7 +37,7 @@ class BaseModel(Configurable):
 
         self.training_summaries = []
         self.validation_summaries = []
-        self.validation_update_ops = []
+        self.validation_metrics = []
 
     # Initialize a tensorflow variable to use it as global step counter
     def init_global_step(self):
@@ -48,7 +49,7 @@ class BaseModel(Configurable):
         tf.reset_default_graph()
         self.training_summaries = []
         self.validation_summaries = []
-        self.validation_update_ops = []
+        self.validation_metrics = []
 
     def add_training_summary(self, summary):
         """Adds a summary to the list of recorded summaries."""
@@ -61,8 +62,10 @@ class BaseModel(Configurable):
         with tf.name_scope(self.METRICS_NAME_SCOPE):
             metric_val, metric_update_op = metric_fn()
 
-        self.validation_update_ops.append(metric_update_op)
+        # Add metric to the list
+        self.validation_metrics.append((name, metric_val, metric_update_op))
 
+        # Create summary and add it to the list
         summary = tf.summary.scalar(name, metric_val)
         self.validation_summaries.append(summary)
 
@@ -74,22 +77,28 @@ class BaseModel(Configurable):
         else:
             return tf.constant("")
 
-    def get_validation_update_op(self):
-        return tf.group(*self.validation_update_ops)
+    def get_merged_validation_ops(self):
+        """ Prepares all the needed ops for performing validation. Init, update, summary and metric value ops. """
 
-    def get_validation_init_op(self):
+        # Metric initializer op (reset counters)
         variables = tf.get_collection(tf.GraphKeys.LOCAL_VARIABLES, scope=self.METRICS_NAME_SCOPE)
         init_op = tf.variables_initializer(variables, 'validation_init')
 
-        return init_op
+        # Merge update ops into a single op
+        update_ops = [update_op for name, value_op, update_op in self.validation_metrics]
+        merged_update_op = tf.group(*update_ops)
 
-    def get_merged_validation_summaries(self):
-        """Merges all the specified summaries and returns the merged summary tensor."""
-
+        # Merge summaries
         if len(self.validation_summaries) > 0:
-            return tf.summary.merge(self.validation_summaries)
+            summary_op = tf.summary.merge(self.validation_summaries)
         else:
-            return tf.constant("")
+            summary_op = tf.constant("")
+
+        # Dict of value ops
+        value_ops = {name:value_op for name, value_op, update_op in self.validation_metrics}
+
+
+        return init_op, merged_update_op, summary_op, value_ops
 
     def build_model(self, features, labels, is_train_tensor, model_heads):
         """Builds the model for the provided input features and labels.
