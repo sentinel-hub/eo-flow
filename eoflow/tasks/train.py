@@ -36,7 +36,7 @@ class TrainTask(BaseTask):
         
         self.model.train(dataset_fn,
                          num_epochs=self.config.num_epochs,
-                         output_directory=self.config.output_directory,
+                         model_directory=self.config.output_directory,
                          save_steps=self.config.save_steps,
                          summary_steps=self.config.summary_steps,
                          progress_steps=self.config.progress_steps
@@ -76,7 +76,7 @@ class TrainAndEvaluateTask(BaseTask):
             train_dataset_fn, val_dataset_fn,
             num_epochs=self.config.num_epochs,
             iterations_per_epoch=self.config.iterations_per_epoch,
-            output_directory=self.config.output_directory,
+            model_directory=self.config.output_directory,
             save_steps=self.config.save_steps,
             summary_steps=self.config.summary_steps,
             progress_steps=self.config.progress_steps

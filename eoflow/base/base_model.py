@@ -114,7 +114,7 @@ class BaseModel(Configurable):
         """
         raise NotImplementedError
 
-    def train(self, dataset_fn, num_epochs, output_directory, save_steps=100, summary_steps=10, progress_steps=10):
+    def train(self, dataset_fn, num_epochs, model_directory, save_steps=100, summary_steps=10, progress_steps=10):
         """ Trains the model on a given dataset. Takes care of saving the model and recording summaries.
 
         :param dataset_fn: A function that builds and returns a tf.data.Dataset containing the input training data.
@@ -123,8 +123,8 @@ class BaseModel(Configurable):
         :type dataset_fn: function
         :param num_epochs: Number of epochs.
         :type num_epochs: int
-        :param output_directory: Output directory, where the model checkpoints and summaries are saved.
-        :type output_directory: str
+        :param model_directory: Output directory, where the model checkpoints and summaries are saved.
+        :type model_directory: str
         :param save_steps: Number of steps between saving model checkpoints.
         :type save_steps: int
         :param summary_steps: Number of steps between recodring summaries.
@@ -149,7 +149,7 @@ class BaseModel(Configurable):
 
             # Create saver
             step_tensor = self.global_step_tensor
-            checkpoint_dir = os.path.join(output_directory, 'checkpoints')
+            checkpoint_dir = os.path.join(model_directory, 'checkpoints')
             create_dirs([checkpoint_dir])
             checkpoint_path = os.path.join(checkpoint_dir, 'model.ckpt')
             saver = tf.train.Saver()
@@ -162,7 +162,7 @@ class BaseModel(Configurable):
 
             # Create summary writer
             create_dirs([checkpoint_dir])
-            summary_writer = tf.summary.FileWriter(output_directory, sess.graph)
+            summary_writer = tf.summary.FileWriter(model_directory, sess.graph)
 
             # Initialize variables
             initializer = tf.global_variables_initializer()
@@ -206,7 +206,7 @@ class BaseModel(Configurable):
             print("Saving checkpoint at step %d." % step)
             saver.save(sess, checkpoint_path, global_step=step)
 
-    def evaluate(self, model_directory, dataset_fn):
+    def evaluate(self, dataset_fn, model_directory):
         # Clear graph
         self.clear_graph()
 
@@ -244,7 +244,7 @@ class BaseModel(Configurable):
 
             return metrics
 
-    def train_and_evaluate(self, train_dataset_fn, val_dataset_fn, num_epochs, iterations_per_epoch, output_directory,
+    def train_and_evaluate(self, train_dataset_fn, val_dataset_fn, num_epochs, iterations_per_epoch, model_directory,
                            save_steps=100, summary_steps=10, progress_steps=10, validation_step=10):
         # Clear graph
         self.clear_graph()
@@ -283,7 +283,7 @@ class BaseModel(Configurable):
 
             # Create saver
             step_tensor = self.global_step_tensor
-            checkpoint_dir = os.path.join(output_directory, 'checkpoints')
+            checkpoint_dir = os.path.join(model_directory, 'checkpoints')
             create_dirs([checkpoint_dir])
             checkpoint_path = os.path.join(checkpoint_dir, 'model.ckpt')
             saver = tf.train.Saver()
@@ -296,8 +296,8 @@ class BaseModel(Configurable):
 
             # Create summary writer
             create_dirs([checkpoint_dir])
-            train_summary_writer = tf.summary.FileWriter(os.path.join(output_directory, 'train'), sess.graph)
-            val_summary_writer = tf.summary.FileWriter(os.path.join(output_directory, 'val'))
+            train_summary_writer = tf.summary.FileWriter(os.path.join(model_directory, 'train'), sess.graph)
+            val_summary_writer = tf.summary.FileWriter(os.path.join(model_directory, 'val'))
 
             # Initialize variables
             initializer = tf.global_variables_initializer()
