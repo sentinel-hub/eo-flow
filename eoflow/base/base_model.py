@@ -18,7 +18,7 @@ class ModelHeads():
             self.train_op = train_op
             self.loss_op = loss_op
             self.summaries_op = summaries_op
-    
+
     class EvaluateHead:
         def __init__(self, metric_init_op, metric_update_op, metric_summaries_op, metric_values_op_dict):
             self.metric_init_op = metric_init_op
@@ -212,7 +212,7 @@ class BaseModel(Configurable):
 
     def evaluate(self, dataset_fn, model_directory):
         """ Runs the evaluation on the model with the provided dataset
-        
+
         :param dataset_fn: A function that builds and returns a tf.data.Dataset containing the input data.
         :type dataset_fn: function
         :param model_directory: Model directory that was used in training.
@@ -260,7 +260,7 @@ class BaseModel(Configurable):
 
     def train_and_evaluate(self, train_dataset_fn, val_dataset_fn, num_epochs, iterations_per_epoch, model_directory,
                            save_steps=100, summary_steps=10, progress_steps=10):
-        """ Trains the model on a given dataset. At the end of each epoch an evaluation is performed on the provided 
+        """ Trains the model on a given dataset. At the end of each epoch an evaluation is performed on the provided
             validation dataset. Takes care of saving the model and recording summaries.
 
         :param train_dataset_fn: A function that builds and returns a tf.data.Dataset containing the input training data.
@@ -271,7 +271,7 @@ class BaseModel(Configurable):
         :type val_dataset_fn: function
         :param num_epochs: Number of epochs.
         :type num_epochs: int
-        :param iterations_per_epoch: Number of training steps to make every epoch. 
+        :param iterations_per_epoch: Number of training steps to make every epoch.
             Training dataset is repeated automatically when the end is reached.
         :type iterations_per_epoch: int
         :param model_directory: Output directory, where the model checkpoints and summaries are saved.
@@ -295,7 +295,7 @@ class BaseModel(Configurable):
             # Get common shape of the datasets (they may differ in batch size, etc.)
             shapes_train = [shape.as_list() for shape in train_dataset.output_shapes]
             shapes_val = [shape.as_list() for shape in val_dataset.output_shapes]
-            
+
             common_shapes = tuple(get_common_shape(shape1, shape2) for shape1, shape2 in zip(shapes_train, shapes_val))
 
             # Dataset selector placeholder
@@ -346,7 +346,6 @@ class BaseModel(Configurable):
                 training_step = 1
                 for e in tqdm(range(num_epochs), desc='Training'):
 
-                    tqdm.write('Training...')
                     # Train for iterations_per_epoch steps
                     for _ in tqdm(range(iterations_per_epoch), desc="Epoch %d" % (e+1), leave=False):
                         # Compute and record summaries every summary_steps
@@ -368,8 +367,8 @@ class BaseModel(Configurable):
 
                         training_step += 1
 
-                    tqdm.write('Evaluating...')
                     # Evaluate at the end of each epoch
+                    tqdm.write('Evaluating...')
                     sess.run(val_iterator.initializer)
                     sess.run(eval_head.metric_init_op)
                     while True:
@@ -377,9 +376,10 @@ class BaseModel(Configurable):
                             sess.run(eval_head.metric_update_op, {handle: val_handle, is_train: False})
                         except tf.errors.OutOfRangeError:
                             break
-                    val_summaries = sess.run(eval_head.metric_summaries_op)
+                    val_summaries, val_values = sess.run([eval_head.metric_summaries_op, eval_head.metric_values_op_dict])
+                    tqdm.write('Evaluation results: %s' % str(val_values))
                     val_summary_writer.add_summary(val_summaries, global_step=step)
-                    
+
             # Catch user interrupt
             except KeyboardInterrupt:
                 print("Training interrupted by user.")
@@ -390,7 +390,7 @@ class BaseModel(Configurable):
 
     def predict(self, dataset_fn, model_directory):
         """ Runs the prediction on the model with the provided dataset
-        
+
         :param dataset_fn: A function that builds and returns a tf.data.Dataset containing the input data.
         :type dataset_fn: function
         :param model_directory: Model directory that was used in training.
