@@ -39,13 +39,16 @@ class BaseModel(Configurable):
         self.validation_summaries = []
         self.validation_metrics = []
 
-    # Initialize a tensorflow variable to use it as global step counter
     def init_global_step(self):
+        """ Initializes a tensorflow variable to use it as global step counter. """
+
         # DON'T forget to add the global step tensor to the tensorflow trainer
         with tf.variable_scope('global_step'):
             self.global_step_tensor = tf.Variable(0, trainable=False, name='global_step')
 
     def clear_graph(self):
+        """ Clears the graph and collections of operations. """
+
         tf.reset_default_graph()
         self.training_summaries = []
         self.validation_summaries = []
@@ -207,6 +210,16 @@ class BaseModel(Configurable):
             saver.save(sess, checkpoint_path, global_step=step)
 
     def evaluate(self, dataset_fn, model_directory):
+        """ Runs the evaluation on the model with the provided dataset
+        
+        :param dataset_fn: A function that builds and returns a tf.data.Dataset containing the input data.
+        :type dataset_fn: function
+        :param model_directory: Model directory that was used in training.
+        :type model_directory: str
+
+        :return: Values of the metrics. Structure of metrics is defined by the model.
+        """
+
         # Clear graph
         self.clear_graph()
 
@@ -245,7 +258,31 @@ class BaseModel(Configurable):
             return metrics
 
     def train_and_evaluate(self, train_dataset_fn, val_dataset_fn, num_epochs, iterations_per_epoch, model_directory,
-                           save_steps=100, summary_steps=10, progress_steps=10, validation_step=10):
+                           save_steps=100, summary_steps=10, progress_steps=10):
+        """ Trains the model on a given dataset. At the end of each epoch an evaluation is performed on the provided 
+            validation dataset. Takes care of saving the model and recording summaries.
+
+        :param train_dataset_fn: A function that builds and returns a tf.data.Dataset containing the input training data.
+            The dataset must be of shape (features, labels) where features and labels contain the data
+            in the shape required by the model.
+        :type train_dataset_fn: function
+        :param val_dataset_fn: Same as for `train_dataset_fn`, but for the validation data.
+        :type val_dataset_fn: function
+        :param num_epochs: Number of epochs.
+        :type num_epochs: int
+        :param iterations_per_epoch: Number of training steps to make every epoch. 
+            Training dataset is repeated automatically when the end is reached.
+        :type iterations_per_epoch: int
+        :param model_directory: Output directory, where the model checkpoints and summaries are saved.
+        :type model_directory: str
+        :param save_steps: Number of steps between saving model checkpoints.
+        :type save_steps: int
+        :param summary_steps: Number of steps between recodring summaries.
+        :type summary_steps: int
+        :param progress_steps: Number of steps between outputing progress to stdout.
+        :type progress_steps: int
+        """
+
         # Clear graph
         self.clear_graph()
 
@@ -352,13 +389,12 @@ class BaseModel(Configurable):
             print("Saving checkpoint at step %d." % step)
             saver.save(sess, checkpoint_path, global_step=step)
 
-
     def predict(self, dataset_fn, model_directory):
         """ Runs the prediction on the model with the provided dataset
         
         :param dataset_fn: A function that builds and returns a tf.data.Dataset containing the input data.
         :type dataset_fn: function
-        :param model_directory: Model directory that was used in training (`output_directory`).
+        :param model_directory: Model directory that was used in training.
         :type model_directory: str
 
         :return: List of predictions. Structure of predictions is defined by the model.
