@@ -206,6 +206,44 @@ class BaseModel(Configurable):
             print("Saving checkpoint at step %d." % step)
             saver.save(sess, checkpoint_path, global_step=step)
 
+    def evaluate(self, model_directory, dataset_fn):
+        # Clear graph
+        self.clear_graph()
+
+        with tf.Session() as sess:
+            # Build the dataset
+            dataset = dataset_fn()
+            iterator = dataset.make_one_shot_iterator()
+            features, labels = iterator.get_next()
+
+            # Build model
+            self.init_global_step()
+            is_train_tensor = tf.constant(False)
+            eval_head = self.build_model(features, labels, is_train_tensor, [ModelHeads.EVALUATE])[0]
+
+            # Restore latest checkpoint
+            checkpoint_dir = os.path.join(model_directory, 'checkpoints')
+            checkpoint_file = tf.train.latest_checkpoint(checkpoint_dir)
+            if checkpoint_file is None:
+                raise ValueError("No checkpoints found in the model directory.")
+
+            print("Restoring checkpoint: %s" % checkpoint_file)
+            saver = tf.train.Saver()
+            saver.restore(sess, checkpoint_file)
+
+            # Initialize metrics
+            sess.run(eval_head.metric_init_op)
+            while True:
+                try:
+                    sess.run(eval_head.metric_update_op)
+                except tf.errors.OutOfRangeError:
+                    break
+
+            # Run metric value ops
+            metrics = sess.run(eval_head.metric_values_op_dict)
+
+            return metrics
+
     def train_and_evaluate(self, train_dataset_fn, val_dataset_fn, num_epochs, iterations_per_epoch, output_directory,
                            save_steps=100, summary_steps=10, progress_steps=10, validation_step=10):
         # Clear graph
