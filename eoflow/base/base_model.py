@@ -1,7 +1,9 @@
-import tensorflow as tf
 import logging
 import os
 from enum import Enum
+
+from tqdm.auto import tqdm
+import tensorflow as tf
 
 from . import Configurable
 from ..utils import create_dirs, get_common_shape
@@ -174,9 +176,8 @@ class BaseModel(Configurable):
             # Train
             try:
                 training_step = 1
-                for e in range(num_epochs):
+                for e in tqdm(range(num_epochs), total=num_epochs):
                     sess.run(iterator.initializer)
-                    print("Epoch %d/%d" % (e+1, num_epochs))
 
                     while True:
                         try:
@@ -190,11 +191,11 @@ class BaseModel(Configurable):
 
                             # Show progress
                             if training_step % progress_steps == 0:
-                                print("Step %d: %f" % (step, loss))
+                                tqdm.write("Step %d: %f" % (step, loss))
 
                             # Model saving
                             if training_step % save_steps == 0:
-                                print("Saving checkpoint at step %d." % step)
+                                tqdm.write("Saving checkpoint at step %d." % step)
                                 saver.save(sess, checkpoint_path, global_step=step)
 
                             training_step += 1
@@ -343,13 +344,11 @@ class BaseModel(Configurable):
             # Train
             try:
                 training_step = 1
-                for e in range(num_epochs):
-                    
-                    print("Epoch %d/%d" % (e+1, num_epochs))
+                for e in tqdm(range(num_epochs), desc='Training'):
 
-                    print('Training...')
+                    tqdm.write('Training...')
                     # Train for iterations_per_epoch steps
-                    for _ in range(iterations_per_epoch):
+                    for _ in tqdm(range(iterations_per_epoch), desc="Epoch %d" % (e+1), leave=False):
                         # Compute and record summaries every summary_steps
                         if training_step % summary_steps == 0:
                             _, loss, step, summaries = sess.run([train_head.train_op, train_head.loss_op, step_tensor, train_head.summaries_op], {handle: train_handle, is_train: True})
@@ -360,16 +359,16 @@ class BaseModel(Configurable):
 
                         # Show progress
                         if training_step % progress_steps == 0:
-                            print("Step %d: %f" % (step, loss))
+                            tqdm.write("Step %d: %f" % (step, loss))
 
                         # Model saving
                         if training_step % save_steps == 0:
-                            print("Saving checkpoint at step %d." % step)
+                            tqdm.write("Saving checkpoint at step %d." % step)
                             saver.save(sess, checkpoint_path, global_step=step)
 
                         training_step += 1
 
-                    print('Evaluating...')
+                    tqdm.write('Evaluating...')
                     # Evaluate at the end of each epoch
                     sess.run(val_iterator.initializer)
                     sess.run(eval_head.metric_init_op)
