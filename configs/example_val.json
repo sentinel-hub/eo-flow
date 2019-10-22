@@ -12,7 +12,7 @@
         "config": {
             "num_epochs": 10,
             "iterations_per_epoch": 1000,
-            "output_directory": "./temp/experiment",
+            "model_directory": "./temp/experiment",
             "train_input_config":{
                 "classname": "examples.input.ExampleInput",
                 "config": {

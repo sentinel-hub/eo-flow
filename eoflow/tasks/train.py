@@ -10,7 +10,7 @@ from ..utils import parse_classname, create_dirs
 class TrainTask(BaseTask):
     class TrainTaskConfig(Schema):
         num_epochs = fields.Int(required=True, description='Number of epochs used in training', example=50)
-        output_directory = fields.String(required=True, description='Directory of the model output', example='/tmp/model/')
+        model_directory = fields.String(required=True, description='Directory of the model output', example='/tmp/model/')
 
         input_config = fields.Nested(nested=ObjectConfiguration, required=True, description="Input type and configuration.")
 
@@ -36,7 +36,7 @@ class TrainTask(BaseTask):
         
         self.model.train(dataset_fn,
                          num_epochs=self.config.num_epochs,
-                         model_directory=self.config.output_directory,
+                         model_directory=self.config.model_directory,
                          save_steps=self.config.save_steps,
                          summary_steps=self.config.summary_steps,
                          progress_steps=self.config.progress_steps
@@ -47,7 +47,7 @@ class TrainAndEvaluateTask(BaseTask):
     class TrainAndEvaluateTask(Schema):
         num_epochs = fields.Int(required=True, description='Number of epochs used in training', example=50)
         iterations_per_epoch = fields.Int(required=True, description='Number of training steps per epoch', example=100)
-        output_directory = fields.String(required=True, description='Directory of the model output', example='/tmp/model/')
+        model_directory = fields.String(required=True, description='Directory of the model output', example='/tmp/model/')
 
         train_input_config = fields.Nested(nested=ObjectConfiguration, required=True, description="Input type and configuration for training.")
         val_input_config = fields.Nested(nested=ObjectConfiguration, required=True, description="Input type and configuration for validation.")
@@ -76,7 +76,7 @@ class TrainAndEvaluateTask(BaseTask):
             train_dataset_fn, val_dataset_fn,
             num_epochs=self.config.num_epochs,
             iterations_per_epoch=self.config.iterations_per_epoch,
-            model_directory=self.config.output_directory,
+            model_directory=self.config.model_directory,
             save_steps=self.config.save_steps,
             summary_steps=self.config.summary_steps,
             progress_steps=self.config.progress_steps

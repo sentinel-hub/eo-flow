@@ -26,7 +26,7 @@
         "classname": "eoflow.tasks.TrainTask",
         "config": {
             "num_epochs": 2,
-            "output_directory": "./temp/experiment_tfcn",
+            "model_directory": "./temp/experiment_tfcn",
             "input_config":{
                 "classname": "eoflow.input.random.RandomSegmentationInput",
                 "config": {

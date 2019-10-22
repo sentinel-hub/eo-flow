@@ -22,7 +22,7 @@
         "classname": "eoflow.tasks.TrainTask",
         "config": {
             "num_epochs": 2,
-            "output_directory": "./temp/experiment_fcn",
+            "model_directory": "./temp/experiment_fcn",
             "input_config":{
                 "classname": "eoflow.input.random.RandomSegmentationInput",
                 "config": {

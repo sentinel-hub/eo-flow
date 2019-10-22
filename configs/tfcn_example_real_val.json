@@ -28,7 +28,7 @@
         "config": {
             "num_epochs": 100,
             "iterations_per_epoch": 100,
-            "output_directory": "./temp/tfcn_svn_lulc",
+            "model_directory": "./temp/tfcn_svn_lulc",
             "train_input_config":{
                 "classname": "examples.input.EOPatchInputExample",
                 "config": {

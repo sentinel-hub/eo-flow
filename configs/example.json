@@ -11,7 +11,7 @@
         "classname": "eoflow.tasks.TrainTask",
         "config": {
             "num_epochs": 10,
-            "output_directory": "./temp/experiment",
+            "model_directory": "./temp/experiment",
             "input_config":{
                 "classname": "examples.input.ExampleInput",
                 "config": {
