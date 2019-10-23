@@ -62,9 +62,9 @@ class ExampleModel(BaseModel):
             # Automatically create init, update, summary, metric value ops for 
             # metrics provided using the `add_validation_metric` method.
             # Should fit most use cases, but allows extension with custom ops, summaries, etc.
-            evaluation_ops = self.get_merged_validation_ops()
+            init_op, update_op, summary_op, value_op = self.get_merged_validation_ops()
 
-            evaluate_head = ModelHeads.EvaluateHead(*evaluation_ops)
+            evaluate_head = ModelHeads.EvaluateHead(init_op, update_op, summary_op, value_op)
 
 
         # Return requested heads in a list
