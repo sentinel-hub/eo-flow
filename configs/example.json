@@ -1,6 +1,6 @@
 {
     "model": {
-        "classname": "eoflow.models.ExampleModel",
+        "classname": "examples.models.ExampleModel",
         "config": {
             "output_size": 10,
             "hidden_units": 256,
@@ -13,7 +13,7 @@
             "num_epochs": 10,
             "output_directory": "./temp/experiment",
             "input_config":{
-                "classname": "eoflow.input.random.RandomClassificationInput",
+                "classname": "examples.input.ExampleInput",
                 "config": {
                     "input_shape": [512],
                     "num_classes": 10,
