@@ -27,7 +27,7 @@
         "classname": "eoflow.tasks.TrainTask",
         "config": {
             "num_epochs": 5,
-            "output_directory": "./temp/tfcn_svn_lulc",
+            "model_directory": "./temp/tfcn_svn_lulc",
             "input_config":{
                 "classname": "examples.input.EOPatchInputExample",
                 "config": {

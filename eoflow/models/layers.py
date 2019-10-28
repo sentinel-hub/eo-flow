@@ -44,10 +44,7 @@ def _conv2d(tin, nfeats_out, is_training, k_size, stride, varnames, add_bn=True,
 
     # Batch normalisation
     if add_bn:
-        conv = tf.contrib.layers.batch_norm(conv,
-                                            is_training=is_training,
-                                            scope=varnames['bn'],
-                                            variables_collections=['bn_collections'])
+        conv = tf.layers.batch_norm(conv, training=is_training)
 
     # ReLU activation function
     r = tf.nn.relu(conv)
@@ -98,10 +95,7 @@ def _conv3d(tin, nfeats_out, is_training, k_size, stride, varnames, add_bn=False
 
     # Batch normalisation
     if add_bn:
-        conv = tf.contrib.layers.batch_norm(conv,
-                                            is_training=is_training,
-                                            scope=varnames['bn'],
-                                            variables_collections=['bn_collections'])
+        conv = tf.layers.batch_norm(conv, training=is_training)
 
     # ReLU activation function
     r = tf.nn.relu(conv)
@@ -140,6 +134,7 @@ def conv2d(input_, output_dim, is_training, k_size=3, im_stride=1, scope='conv2d
         :return r2: Result of convolutions
 
     """
+    dropout_rate = 1 - keep_prob
     with tf.variable_scope(scope):
         # First convolutional filter
         c_2d_1 = {'w': 'w_2d_1', 'b': 'b_2d_1', 'bn': 'bn_2d_1'}
@@ -153,7 +148,7 @@ def conv2d(input_, output_dim, is_training, k_size=3, im_stride=1, scope='conv2d
                          bias_init=bias_init,
                          padding=padding)
         if add_dropout:
-            r_2d_1 = tf.nn.dropout(r_2d_1, keep_prob)
+            r_2d_1 = tf.layers.dropout(r_2d_1, rate=dropout_rate, training=is_training)
 
         if single_filter:
 
@@ -172,7 +167,7 @@ def conv2d(input_, output_dim, is_training, k_size=3, im_stride=1, scope='conv2d
                              bias_init=bias_init,
                              padding=padding)
             if add_dropout:
-                r_2d_2 = tf.nn.dropout(r_2d_2, keep_prob)
+                r_2d_2 = tf.layers.dropout(r_2d_2, rate=dropout_rate, training=is_training)
 
             return r_2d_2
 
@@ -209,6 +204,8 @@ def conv3d(input_, output_dim, is_training, k_size=3, im_stride=1, scope='conv3d
         :type padding: str
         :return: Result of convolutions
     """
+    dropout_rate = 1 - keep_prob
+
     with tf.variable_scope(scope):
         # First 3D convolution
         c_3d_1 = {'w': 'w_3d_1', 'b': 'b_3d_1', 'bn': 'bn_3d_1'}
@@ -223,7 +220,7 @@ def conv3d(input_, output_dim, is_training, k_size=3, im_stride=1, scope='conv3d
                          bias_init=bias_init,
                          padding=padding)
         if add_dropout:
-            r_3d_1 = tf.nn.dropout(r_3d_1, keep_prob)
+            r_3d_1 = tf.layers.dropout(r_3d_1, rate=dropout_rate, training=is_training)
 
         if single_filter:
 
@@ -242,7 +239,7 @@ def conv3d(input_, output_dim, is_training, k_size=3, im_stride=1, scope='conv3d
                              bias_init=bias_init,
                              padding=padding)
             if add_dropout:
-                r_3d_2 = tf.nn.dropout(r_3d_2, keep_prob)
+                r_3d_2 = tf.layers.dropout(r_3d_2, rate=dropout_rate, training=is_training)
 
             return r_3d_2
 
@@ -272,8 +269,7 @@ def deconv2d(input_, output_shape, is_training, k_size=2, scope='deconv2d', add_
 
         # Batch-normalisation
         if add_bn:
-            deconv = tf.contrib.layers.batch_norm(deconv, is_training=is_training, scope='bn',
-                                                  variables_collections=['bn_collections'])
+            deconv = tf.layers.batch_norm(deconv, training=is_training)
 
         # ReLU activation function
         r = tf.nn.relu(deconv)
@@ -373,7 +369,7 @@ def conv2d_gru(input_, nfeats_out, k_size=3, scope='reduce_t', padding='VALID', 
 
 
 def reduce_3d_to_2d(input_, nfeats_out, k_size=3, im_stride=1, add_dropout=False, keep_prob=.8, scope='reduce_t',
-                    bias_init=0.0, padding='VALID'):
+                    bias_init=0.0, padding='VALID', is_training=True):
     """ Reduce Spatio-temporal 3d volume to spatial 2d image by 3d convolution over time and axis squeezing
 
         This function reduces a 5D TF tensor of shape [N, T, H, W, C] to a 4D tensor of shape [N, H, W, C]
@@ -399,6 +395,7 @@ def reduce_3d_to_2d(input_, nfeats_out, k_size=3, im_stride=1, add_dropout=False
         :return: 4D tensor of shape [N, H, W, C]
         :rtype: TF tensor
     """
+    dropout_rate = 1 - keep_prob
     with tf.variable_scope(scope):
         # Shape of input tensor
         input_shape = input_.get_shape().as_list()
@@ -419,7 +416,7 @@ def reduce_3d_to_2d(input_, nfeats_out, k_size=3, im_stride=1, add_dropout=False
 
         # Dropout
         if add_dropout:
-            r = tf.nn.dropout(r, keep_prob)
+            r = tf.layers.dropout(r, rate=dropout_rate, training=is_training)
 
         # Squeeze along temporal dimension
         out = tf.squeeze(r, axis=[1], name='squeeze')
