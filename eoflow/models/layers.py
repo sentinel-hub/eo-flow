@@ -1,5 +1,6 @@
 from .conv_cells import ConvGRUCell
 import tensorflow as tf
+from tensorflow.keras import layers
 import numpy as np
 
 
@@ -102,6 +103,38 @@ def _conv3d(tin, nfeats_out, is_training, k_size, stride, varnames, add_bn=False
 
     return r
 
+
+class Conv2D(layers.Layer):
+    def __init__(self, filters, kernel_size=3, strides=1, padding='VALID', add_dropout=True, dropout_rate=0.2,
+           batch_normalization=False, num_repetitions=1):
+        super().__init__()
+
+        repetitions = []
+
+        for i in range(num_repetitions):
+            layer = []
+            layer.append(layers.Conv2D(
+                filters=filters,
+                kernel_size=kernel_size,
+                strides=strides,
+                padding=padding,
+                activation='relu'
+            ))
+
+            if batch_normalization:
+                layer.append(layers.BatchNormalization())
+
+            if add_dropout:
+                layer.append(layers.Dropout(rate=dropout_rate))
+
+            layer = tf.keras.Sequential(layer)
+
+            repetitions.append(layer)
+
+        self.combined_layer = tf.keras.Sequential(repetitions)
+
+    def call(self, inputs, training=False):
+        return self.combined_layer(inputs, training=training)
 
 def conv2d(input_, output_dim, is_training, k_size=3, im_stride=1, scope='conv2d', add_dropout=True, keep_prob=0.8,
            add_bn=False, single_filter=False, bias_init=0.0, padding='VALID'):
@@ -244,6 +277,27 @@ def conv3d(input_, output_dim, is_training, k_size=3, im_stride=1, scope='conv3d
             return r_3d_2
 
 
+class Deconv2D(layers.Layer):
+    def __init__(self, filters, kernel_size=2, batch_normalization=False):
+        super().__init__()
+
+        layer = []
+        layer.append(layers.Conv2DTranspose(
+            filters=filters,
+            kernel_size=kernel_size,
+            strides=kernel_size,
+            padding='SAME',
+            activation='relu'
+        ))
+
+        if batch_normalization:
+            layer.append(layers.BatchNormalization())
+
+        self.layer = tf.keras.Sequential(layer)
+
+    def call(self, inputs, training=None):
+        return self.layer(inputs, training=training)
+
 def deconv2d(input_, output_shape, is_training, k_size=2, scope='deconv2d', add_bn=True):
     """ Transposed convolution layer to perform upsampling
 
@@ -276,8 +330,7 @@ def deconv2d(input_, output_shape, is_training, k_size=2, scope='deconv2d', add_
 
         return r
 
-
-def crop_and_concat(x1, x2):
+class CropAndConcat(layers.Layer):
     """ Function to generate skip connections, cropping and concatenating tensors
 
         :param x1: First tensor to be cropped and concatenated
@@ -285,19 +338,14 @@ def crop_and_concat(x1, x2):
         :return out: Output tensor
 
     """
-    # Get shapes of tensors
-    x1_shape = x1.get_shape().as_list()
-    x2_shape = x2.get_shape().as_list()
 
-    # Get differences in shapes
-    offsets = [0, (x1_shape[1] - x2_shape[1]) // 2, (x1_shape[2] - x2_shape[2]) // 2, 0]
-    size = [-1, x2_shape[1], x2_shape[2], -1]
+    def call(self, x1, x2, training=None):
+        # Crop x1 to shape of x2
+        x2_shape = tf.shape(x2)
+        x1_crop = tf.image.resize_with_crop_or_pad(x1, x2_shape[1], x2_shape[2])
 
-    # Crop the first tensor
-    x1_crop = tf.slice(x1, offsets, size)
-
-    # Concatenate along last dimension and return
-    return tf.concat([x1_crop, x2], axis=-1)
+        # Concatenate along last dimension and return
+        return tf.concat([x1_crop, x2], axis=-1)
 
 
 def max_pool_2d(input_, ksize=2, stride=2):

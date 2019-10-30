@@ -1,6 +1,6 @@
 """ Implementation of ConvLSTM and ConvGRU derived from https://github.com/carlthome/tensorflow-convlstm-cell """
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 
 class ConvLSTMCell(tf.nn.rnn_cell.RNNCell):
