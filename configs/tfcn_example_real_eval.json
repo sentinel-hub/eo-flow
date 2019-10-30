@@ -24,7 +24,7 @@
         }
     },
     "task": {
-        "classname": "eoflow.tasks.PredictTask",
+        "classname": "eoflow.tasks.EvaluateTask",
         "config": {
             "model_directory": "./temp/tfcn_svn_lulc",
             "input_config":{

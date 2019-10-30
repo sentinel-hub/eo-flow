@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 from marshmallow import Schema, fields
 
-from ..base import BaseModel, ModelMode
+from ..base import BaseModel, ModelHeads
 from .layers import conv1d, conv2d, deconv2d, crop_and_concat, max_pool_2d, weighted_cross_entropy
 
 logging.basicConfig(level=logging.INFO,
@@ -39,7 +39,7 @@ class FCNModel(BaseModel):
         """Builds the net for input x."""
 
         net = x
-        keep_prob = self.config.keep_prob if is_training else 1.0
+        keep_prob = self.config.keep_prob
 
         # Encoding path
         # the number of features of the convolutional kernels is proportional to the square of the level
@@ -122,23 +122,26 @@ class FCNModel(BaseModel):
 
         return logits
 
-    def build_model(self, features, labels, mode):
+    def build_model(self, features, labels, is_train_tensor, model_heads):
         x = features
-        is_training = mode == ModelMode.TRAIN
 
         # Build net
-        logits = self._net(x, is_training)
+        logits = self._net(x, is_train_tensor)
 
-        if mode == ModelMode.TRAIN:
+        # softmax to convert activations to pseudo-probabilities
+        probs = tf.nn.softmax(logits)
+        # class prediction as argmax of softmax
+        preds = tf.argmax(probs[..., 1:], 3)
+
+        if ModelHeads.TRAIN in model_heads:
             out_shape = tf.shape(logits)
             labels_cropped = tf.image.resize_with_crop_or_pad(labels, out_shape[1], out_shape[2])
 
-            # Summaries
             if self.config.image_summaries:
-                self.add_summary(tf.summary.image('input', features[...,0:3]))
-                self.add_summary(tf.summary.image('labels_raw', labels[...,0:3]))
-                self.add_summary(tf.summary.image('labels', labels_cropped[...,0:3]))
-                self.add_summary(tf.summary.image('output', logits[...,0:3]))
+                self.add_training_summary(tf.summary.image('input', features[...,0:3]))
+                self.add_training_summary(tf.summary.image('labels_raw', labels[...,0:3]))
+                self.add_training_summary(tf.summary.image('labels', labels_cropped[...,0:3]))
+                self.add_training_summary(tf.summary.image('output', logits[...,0:3]))
 
             # flatten tensors to apply class weighting
             flat_logits = tf.reshape(logits, [-1, self.config.n_classes])
@@ -149,7 +152,7 @@ class FCNModel(BaseModel):
             else:
                 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=flat_logits, labels=flat_labels))
 
-            self.add_summary(tf.summary.scalar('loss', loss))
+            self.add_training_summary(tf.summary.scalar('loss', loss))
 
             # update operations for batch-normalisation and define train stepo as minimisation of loss
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -158,25 +161,38 @@ class FCNModel(BaseModel):
                 train_op = optimizer.minimize(loss,
                                               global_step=self.global_step_tensor)
 
-            return train_op, loss, self.get_merged_summaries()
+            train_head = ModelHeads.TrainHead(train_op, loss, self.get_merged_training_summaries())
 
-
-        # softmax to convert activations to pseudo-probabilities
-        probs = tf.nn.softmax(logits)
-        # class prediction as argmax of softmax
-        preds = tf.argmax(probs, 3)
-
-        if mode == ModelMode.PREDICT:
+        if ModelHeads.PREDICT in model_heads:
 
             predictions = {
                 'probabilities': probs,
                 'predictions': preds
             }
 
-            return predictions
+            predict_head = ModelHeads.PredictHead(predictions)
 
-        if mode == ModelMode.EVALUATE:
-            # compute classification accuracy
-            accuracy = tf.reduce_mean(tf.cast(tf.equal(preds, tf.argmax(labels, 3)), tf.float32))
+        if ModelHeads.EVALUATE in model_heads:
+            out_shape = tf.shape(logits)
+            labels_cropped = tf.image.resize_with_crop_or_pad(labels, out_shape[1], out_shape[2])
 
-            return accuracy
+            labels_n = tf.argmax(labels_cropped[..., 1:], 3)
+            accuracy_fn = lambda: tf.metrics.accuracy(labels_n, preds)
+
+            self.add_validation_metric(accuracy_fn, 'accuracy')
+
+            evaluate_ops = self.get_merged_validation_ops()
+            evaluate_head = ModelHeads.EvaluateHead(*evaluate_ops)
+
+        heads = []
+        for model_head in model_heads:
+            if model_head == ModelHeads.TRAIN:
+                heads.append(train_head)
+            elif model_head == ModelHeads.PREDICT:
+                heads.append(predict_head)
+            elif model_head == ModelHeads.EVALUATE:
+                heads.append(evaluate_head)
+            else:
+                raise NotImplementedError
+
+        return heads

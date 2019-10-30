@@ -11,7 +11,7 @@ from .operations import extract_subpatches, augment_data, cache_dataset
 _valid_types = [t.value for t in FeatureType]
 
 def eopatch_dataset(root_dir_or_list, features_data, fill_na=None):
-    """ Reads a features and labels from a single EOPatch.
+    """ Creates a tf dataset with features from saved EOPatches.
 
     :param data_dir_or_list: Root directory containing eopatches or a list of eopatch directories.
     :type data_dir_or_list: str or list(str)
@@ -63,8 +63,10 @@ def eopatch_dataset(root_dir_or_list, features_data, fill_na=None):
     return dataset
 
 
-class EOPatchInputExample(BaseInput):
-    """ An example input method. Shows reading EOPatches, subpatch extraction, data augmentation, caching, batching, etc. """
+class EOPatchSegmentationInput(BaseInput):
+    """ An input method for basic EOPatch reading. Reads features and segmentation labels. For more complex behaviour 
+        (subpatch extraction, data augmentation, caching, ...) create your own input method (see examples). 
+    """
 
     class _Schema(Schema):
         data_dir = fields.String(description="The directory containing EOPatches.", required=True)
@@ -81,15 +83,8 @@ class EOPatchInputExample(BaseInput):
         labels_feature_shape = fields.List(fields.Int, description="Shape of the labels feature. Use -1 for unknown dimesnions.",
                                            required=True, example=[-1, 100, 100, 3])
 
-        patch_size = fields.List(fields.Int, description="Width and height of extracted patches.", required=True, example=[1,2])
-
-        interleave_size = fields.Int(description="Number of eopatches to interleave the subpatches from.", required=True, example=5)
         batch_size = fields.Int(description="Number of examples in a batch.", required=True, example=20)
         num_classes = fields.Int(description="Number of classes. Used for one-hot encoding.", required=True, example=2)
-
-        cache_file = fields.String(
-            missing=None, description="A path to the file where the dataset will be cached. No caching if not provided.", example='/tmp/data')
-        num_subpatches = fields.Int(required=True, description="Number of subpatches extracted by random sampling.", example=5)
 
     def _parse_shape(self, shape):
         shape = [None if s<0 else s for s in shape]
@@ -104,28 +99,6 @@ class EOPatchInputExample(BaseInput):
             (cfg.labels_feature_type, cfg.labels_feature_name, 'labels', np.int64, self._parse_shape(cfg.labels_feature_shape))
         ]
         dataset = eopatch_dataset(self.config.data_dir, features_data, fill_na=-2)
-
-        # Extract random subpatches
-        extract_fn = extract_subpatches(
-            self.config.patch_size,
-            [('features', self.config.input_feature_axis),
-             ('labels', self.config.labels_feature_axis)],
-             random_sampling=True,
-             num_random_samples=self.config.num_subpatches
-        )
-        # Interleave patches extracted from multiple EOPatches
-        dataset = dataset.interleave(extract_fn, self.config.interleave_size)
-        
-        # Cache the dataset so the patch extraction is done only once
-        if self.config.cache_file is not None:
-            dataset = cache_dataset(dataset, self.config.cache_file)
-
-        # Data augmentation
-        feature_augmentation = [
-            ('features', ['flip_left_right', 'rotate', 'brightness']),
-            ('labels', ['flip_left_right', 'rotate'])
-        ]
-        dataset = dataset.map(augment_data(feature_augmentation))
 
         # One-hot encode labels and return tuple
         def _prepare_data(data):

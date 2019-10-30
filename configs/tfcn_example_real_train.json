@@ -27,9 +27,9 @@
         "classname": "eoflow.tasks.TrainTask",
         "config": {
             "num_epochs": 5,
-            "output_directory": "./temp/tfcn_svn_lulc",
+            "model_directory": "./temp/tfcn_svn_lulc",
             "input_config":{
-                "classname": "eoflow.input.eopatch.EOPatchInputExample",
+                "classname": "examples.input.EOPatchInputExample",
                 "config": {
                     "data_dir": "/storage/jupyter/data/svn_lulc/data/train-val-linear-v01-aws/train",
                     "input_feature_type": "data",

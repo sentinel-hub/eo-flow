@@ -24,10 +24,32 @@
         }
     },
     "task": {
-        "classname": "eoflow.tasks.PredictTask",
+        "classname": "eoflow.tasks.TrainAndEvaluateTask",
         "config": {
+            "num_epochs": 100,
+            "iterations_per_epoch": 100,
             "model_directory": "./temp/tfcn_svn_lulc",
-            "input_config":{
+            "train_input_config":{
+                "classname": "examples.input.EOPatchInputExample",
+                "config": {
+                    "data_dir": "/storage/jupyter/data/svn_lulc/data/train-val-linear-v01-aws/train",
+                    "input_feature_type": "data",
+                    "input_feature_name": "FEATURES",
+                    "input_feature_axis": [1,2],
+                    "input_feature_shape": [23, -1, -1, 9],
+                    "labels_feature_type": "mask_timeless",
+                    "labels_feature_name": "LULC_RABA",
+                    "labels_feature_axis": [0,1],
+                    "labels_feature_shape": [-1, -1, 1],
+                    "patch_size": [128, 128],
+                    "interleave_size": 3,
+                    "batch_size": 5,
+                    "num_classes": 10,
+                    "cache_file": "./temp/tfcn_svn_lulc/dataset/cache_train",
+                    "num_subpatches": 5
+                }
+            },
+            "val_input_config":{
                 "classname": "examples.input.EOPatchInputExample",
                 "config": {
                     "data_dir": "/storage/jupyter/data/svn_lulc/data/train-val-linear-v01-aws/test",
@@ -41,12 +63,15 @@
                     "labels_feature_shape": [-1, -1, 1],
                     "patch_size": [128, 128],
                     "interleave_size": 3,
-                    "batch_size": 1,
+                    "batch_size": 5,
                     "num_classes": 10,
                     "cache_file": "./temp/tfcn_svn_lulc/dataset/cache_val",
                     "num_subpatches": 5
                 }
-            }
+            },
+            "save_steps": 100,
+            "summary_steps": 10,
+            "progress_steps": 1
         }
     }
   }
