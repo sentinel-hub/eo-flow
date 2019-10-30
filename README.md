@@ -21,40 +21,17 @@ The project also contains example configurations to run common tasks on implemen
 The structure is inspired by the tensorflow [Estimator API](https://www.tensorflow.org/guide/custom_estimators).
 
 The subpackages of `eoflow` are as follows:
-* `base`: this directory contains the abstract classes to build a model and a trainer. Any useful abstract class should go in this folder.
+* `base`: this directory contains the abstract classes to build models, inputs and tasks. Any useful abstract class should go in this folder.
 * `models`: classes implementing the TF models (e.g. Fully-Convolutional-Network, GANs, seq2seq, ...). These classes inherit and implement the `BaseModel` abstract class.
 * `tasks`: classes handling the actions that can be applied to each TF model. These actions may include training, inference, exporting the model, validation, etc. The tasks inherit the `BaseTask` abstract class. Currently only the training task is implemented in `TrainTask` class.
 * `input`: these classes handle the loading of the input data into a tf Dataset. These classes may be specific to the problem and data at hand, but can also contain common classes for reading certain type of data (EOPatch, np arrays, etc.). Currently only random input data generation is implemented.
-* `utils`: collection of utility function such as configuration file parser, directory creation, and logging functionality to TensorBoard.
-
-Old submodules (will be removed when refactoring is complete):
- 
-* `trainers`: classes handling the training actions for each TF model. The same trainer class could be used to train different models. These classes inherit the `BaseTrainer` abstract class. An out-of-bag cross-validation evaluation is implemented, to allow evaluation of the models on held-out data at each training epoch. This allows to estimate model over-fitting during training. Currently the held-out data is the same for all training epochs and it's sampled without replacement.
-* `predictors`: classes to handle predictions once the model has been trained. The predictors accept a frozen `.pb` file and perform theprediction of the specified items of an `EOPatch`, and save result in an EOPatch.
-* `data_loader`: these classes handle the loading of the input data into batches. These classes are specific to the problem and data at hand.
+* `utils`: collection of utility functions
 
 ## Examples and scripts
 
 Project also contains other folders:
 * `configs`: folder containing example configurations for different models. Config parameters are stored in .json files. Results of an experiment should be reproducible by re-running the same config file. Config files specify the whole workflow (model, task, data input if required).
-* `mains`: this folder holds the scripts that allow to run specific projects and experiments, by chaining `models`, `data_loaders` and `trainers`. Will be removed in the future
-
-## Example files
-
-Implementations in files `examples/models.py` and `examples/input.py` are available as guidelines on how the configurable classes for **models** and **input** should be implemented.
-
-A toy example using the example model and input is configured in the`configs/example.json` configuration file.
-
-To run the example, run
-```
-$ python -m eoflow.execute configs/example.json
-```
-This will create an output folder `temp/experiment` containing the tensorboard logs and model checkpoints.
-
-To visualise the logs in TensorBoard, run
-```
-$ tensorboard --logdir=temp/experiment
-```
+* `examples`: folder containing example implementations of custom models and input functions. Also contains a jupyter notebook example.
 
 ## Currently implemented projects
 
@@ -102,10 +79,27 @@ python -m eoflow.execute configs/tfcn_example.json
 
 The example configuration can be used as a base to run your own experiments.
 
-## Implement a new model
+## Custom models and input functions
 
 In order to create your own model, create a new class that inherits from `BaseModel` or any of its subclasses. The model must specify a schema for its configuration and a function `build_model` that builds the model with the provided input and label tensors. Look at the example implementation for more details.
 
-## Implementing a custom input method
+The package `eoflow` contains a few of the most common input methods. It also provides common dataset building blocks: EOPatch loading, subpatch extraction, data augmentation. You can use these functions to create a custom input method that fits you data and model. To implement a custom input method create a new class that inherits from `BaseInput` or any of its subclasses. The input method must specify a schema for its configuration and a function `get_dataset` that builds a tensorflow Dataset that reads the input data. For further details look at the example implementation.
 
-The package `eoflow` contains a few of the most common input methods. Some models or pipelines may require a specific input method. To implement a custom input method create a new class that inherits from `BaseInput` or any of its subclasses. The input method must specify a schema for its configuration and a function `get_dataset` that builds a tensorflow Dataset that reads the input data. For further details look at the example implementation.
+Implementations in files `examples/models.py` and `examples/input.py` are available as guidelines on how the configurable classes for **models** and **input** should be implemented.
+
+A toy example using the example model and input is configured in the`configs/example.json` configuration file.
+
+To run the example, run
+```
+$ python -m eoflow.execute configs/example.json
+```
+This will create an output folder `temp/experiment` containing the tensorboard logs and model checkpoints.
+
+To visualise the logs in TensorBoard, run
+```
+$ tensorboard --logdir=temp/experiment
+```
+
+## Programatic use
+
+Notebook `examples/notebook.ipnyb` shows how `eoflow` can be also used in code. The notebook shows model building, defining the input datasets, training, evaluation and prediction.
