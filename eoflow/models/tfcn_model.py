@@ -1,16 +1,26 @@
 import logging
 import tensorflow as tf
+from tensorflow.keras import layers
 from marshmallow import Schema, fields
 from marshmallow.validate import OneOf
 
-from ..base import BaseModel, ModelHeads
-from .layers import conv1d, conv2d, conv3d, deconv2d, crop_and_concat, max_pool_3d, reduce_3d_to_2d, \
-    weighted_cross_entropy,  compute_iou_loss
+from ..base import BaseModel
+from .layers import Conv2D, Deconv2D, CropAndConcat, Conv3D, MaxPool3D, Reduce3DTo2D
+from tensorflow.python.keras.engine import training_utils
 
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
 
+def crop_loss(loss_fn):
+    """ Wrapper loss. Crops labels to fit logits before applying the loss fn. """
+    def _loss_fn(labels, logits):
+        logits_shape = tf.shape(logits)
+        labels_crop = tf.image.resize_with_crop_or_pad(labels, logits_shape[1], logits_shape[2])
+
+        return loss_fn(labels_crop, logits)
+
+    return _loss_fn
 
 class TFCNModel(BaseModel):
     """ Implementation of a Temporal Fully-Convolutional-Network """
@@ -42,57 +52,56 @@ class TFCNModel(BaseModel):
 
         image_summaries = fields.Bool(missing=False, description='Record images summaries.')
 
-    def _net(self, x, is_training):
+    def build(self, inputs_shape):
 
-        net = x
-        keep_prob = self.config.keep_prob
+        x = layers.Input(inputs_shape[1:])
+        dropout_rate = 1 - self.config.keep_prob
+
+        num_repetitions = 1 if self.config.single_encoding_conv else 2
 
         # encoding path
+        net = x
         connection_outputs = []
         for layer in range(self.config.n_layers):
             # compute number of features as a function of network depth level
             features = 2 ** layer * self.config.features_root
             # bank of one 3d convolutional filter; convolution is done along the temporal as well as spatial directions
-            conv = conv3d(net,
-                          features,
-                          is_training=is_training,
-                          k_size=self.config.conv_size,
-                          im_stride=self.config.conv_stride,
-                          scope='encoding_' + str(layer),
-                          add_dropout=self.config.add_dropout,
-                          keep_prob=keep_prob,
-                          add_bn=self.config.add_batch_norm,
-                          single_filter=self.config.single_encoding_conv,
-                          padding=self.config.padding)
+            conv = Conv3D(
+                features,
+                kernel_size=self.config.conv_size,
+                strides=self.config.conv_stride,
+                add_dropout=self.config.add_dropout,
+                dropout_rate=dropout_rate,
+                batch_normalization=self.config.add_batch_norm,
+                num_repetitions=num_repetitions,
+                padding=self.config.padding)(net)
+
             connection_outputs.append(conv)
             # max pooling operation
-            net = max_pool_3d(conv,
-                              ksize=self.config.pool_size,
-                              stride=self.config.pool_stride,
-                              pool_time=self.config.pool_time)
+            net = MaxPool3D(
+                kernel_size=self.config.pool_size,
+                strides=self.config.pool_stride,
+                pool_time=self.config.pool_time)(conv)
+
         # Bank of 1 3d convolutional filter at bottom of FCN
-        bottom = conv3d(net,
-                        2 ** self.config.n_layers * self.config.features_root,
-                        is_training=is_training,
-                        k_size=self.config.conv_size,
-                        im_stride=self.config.conv_stride,
-                        scope='bottom',
-                        add_dropout=self.config.add_dropout,
-                        keep_prob=keep_prob,
-                        add_bn=self.config.add_batch_norm,
-                        single_filter=self.config.single_encoding_conv,
-                        padding=self.config.padding,
-                        convolve_time=(not self.config.pool_time))
+        bottom = Conv3D(
+            2 ** self.config.n_layers * self.config.features_root,
+            kernel_size=self.config.conv_size,
+            strides=self.config.conv_stride,
+            add_dropout=self.config.add_dropout,
+            dropout_rate=dropout_rate,
+            batch_normalization=self.config.add_batch_norm,
+            num_repetitions=num_repetitions,
+            padding=self.config.padding,
+            convolve_time=(not self.config.pool_time))(net)
+
         # Reduce temporal dimension
-        bottom = reduce_3d_to_2d(bottom,
-                                 2 ** self.config.n_layers * self.config.features_root,
-                                 k_size=self.config.conv_size_reduce,
-                                 im_stride=self.config.conv_stride,
-                                 scope='reduce_bottom',
-                                 add_dropout=self.config.add_dropout,
-                                 keep_prob=keep_prob,
-                                 padding="VALID",
-                                 is_training=is_training)
+        bottom = Reduce3DTo2D(
+            2 ** self.config.n_layers * self.config.features_root,
+            kernel_size=self.config.conv_size_reduce,
+            stride=self.config.conv_stride,
+            add_dropout=self.config.add_dropout,
+            dropout_rate=dropout_rate)(bottom)
 
         net = bottom
         # decoding path
@@ -103,132 +112,52 @@ class TFCNModel(BaseModel):
             features = 2 ** conterpart_layer * self.config.features_root
 
             # transposed convolution to upsample tensors
-            shape = net.get_shape().as_list()
-            deconv_output_shape = [tf.shape(net)[0],
-                                   shape[1] * self.config.deconv_size,
-                                   shape[2] * self.config.deconv_size,
-                                   features]
-            deconv = deconv2d(net,
-                              deconv_output_shape,
-                              k_size=self.config.deconv_size,
-                              is_training=is_training,
-                              scope='deconv_' + str(conterpart_layer),
-                              add_bn=self.config.add_batch_norm)
+            deconv = Deconv2D(
+                filters=features,
+                kernel_size=self.config.deconv_size,
+                batch_normalization=self.config.add_batch_norm)(net)
+
             # skip connection with linear combination along time
-            reduced = reduce_3d_to_2d(connection_outputs[conterpart_layer],
-                                      features,
-                                      k_size=self.config.conv_size_reduce,
-                                      im_stride=self.config.conv_stride,
-                                      add_dropout=self.config.add_dropout,
-                                      keep_prob=keep_prob,
-                                      scope='decoding_reduced_' + str(conterpart_layer),
-                                      padding="VALID",
-                                      is_training=is_training)
+            reduced = Reduce3DTo2D(
+                features,
+                kernel_size=self.config.conv_size_reduce,
+                stride=self.config.conv_stride,
+                add_dropout=self.config.add_dropout,
+                dropout_rate=dropout_rate)(connection_outputs[conterpart_layer])
+
             # crop and concatenate
-            cc = crop_and_concat(reduced, deconv)
+            cc = CropAndConcat()(reduced, deconv)
+
             # bank of 2 convolutional layers as in standard FCN
-            net = conv2d(cc,
-                         features,
-                         k_size=self.config.conv_size,
-                         im_stride=self.config.conv_stride,
-                         is_training=is_training,
-                         scope='decoding_' + str(conterpart_layer),
-                         add_dropout=self.config.add_dropout,
-                         keep_prob=keep_prob,
-                         add_bn=self.config.add_batch_norm,
-                         padding=self.config.padding)
+            net = Conv2D(
+                features,
+                kernel_size=self.config.conv_size,
+                strides=self.config.conv_stride,
+                add_dropout=self.config.add_dropout,
+                dropout_rate=dropout_rate,
+                batch_normalization=self.config.add_batch_norm,
+                padding=self.config.padding,
+                num_repetitions=2)(cc)
+
         # final 1x1 convolution corresponding to pixel-wise linear combination of feature channels
-        logits = conv1d(net,
-                        self.config.n_classes,
-                        scope='logits',
-                        bias_init=self.config.bias_init)
+        logits = layers.Conv2D(
+                filters=self.config.n_classes,
+                kernel_size=1)(net)
 
-        return logits
+        self.net = tf.keras.Model(inputs=x, outputs=logits)
 
-    def build_model(self, features, labels, is_train_tensor, model_heads):
-        x = features
+    def call(self, inputs, training=None):
+        return self.net(inputs, training)
 
-        # Build net
-        logits = self._net(x, is_train_tensor)
+    def compile(self, **kwargs):
+        # Override the compile method to wrap the loss
 
-        # softmax to convert activations to pseudo-probabilities
-        probs = tf.nn.softmax(logits)
-        # class prediction as argmax of softmax
-        preds = tf.argmax(probs[..., 1:], 3)
+        if 'loss' in kwargs:
+            loss = kwargs['loss']
+            loss_fn = training_utils.get_loss_function(loss)
 
-        if ModelHeads.TRAIN in model_heads:
-            out_shape = tf.shape(logits)
-            labels_cropped = tf.image.resize_with_crop_or_pad(labels, out_shape[1], out_shape[2])
+            # Wrapp loss function
+            wrapped_loss_fn = crop_loss(loss_fn)
+            kwargs['loss'] = wrapped_loss_fn
 
-            if self.config.image_summaries:
-                self.add_training_summary(tf.summary.image('input', features[:,0,...][...,0:3]))
-                self.add_training_summary(tf.summary.image('labels_raw', labels[...,0:3]))
-                self.add_training_summary(tf.summary.image('labels', labels_cropped[...,0:3]))
-                self.add_training_summary(tf.summary.image('output', logits[...,0:3]))
-
-            # flatten tensors to apply class weighting
-            flat_logits = tf.reshape(logits, [-1, self.config.n_classes])
-            flat_labels = tf.reshape(labels_cropped, [-1, self.config.n_classes])
-
-            # cross-entropy loss w or w/o class weights
-            if self.config.class_weights is not None:
-                cross_entropy_loss = weighted_cross_entropy(flat_logits, flat_labels, self.config.class_weights)
-            else:
-                cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=flat_logits,
-                                                                                            labels=flat_labels))
-            # intersection over union loss
-            iou_loss = compute_iou_loss(self.config.n_classes, probs, preds, tf.cast(labels_cropped, tf.float32),
-                                        class_weights=self.config.class_weights, exclude_background=False)
-
-            # Total loss, which is cross-entropy, IOU or a sum of the two
-            if self.config.loss == 'cross-entropy':
-                loss = cross_entropy_loss
-            elif self.config.loss == 'iou':
-                loss = iou_loss
-            elif self.config.loss == 'combined':
-                loss = cross_entropy_loss + iou_loss
-
-            self.add_training_summary(tf.summary.scalar('loss', loss))
-
-            # update operations for batch-normalisation and define train stepo as minimisation of loss
-            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-            with tf.control_dependencies(update_ops):
-                optimizer = tf.train.AdamOptimizer(self.config.learning_rate)
-                train_op = optimizer.minimize(loss,
-                                              global_step=self.global_step_tensor)
-
-            train_head = ModelHeads.TrainHead(train_op, loss, self.get_merged_training_summaries())
-
-        if ModelHeads.PREDICT in model_heads:
-
-            predictions = {
-                'probabilities': probs,
-                'predictions': preds
-            }
-
-            predict_head = ModelHeads.PredictHead(predictions)
-
-        if ModelHeads.EVALUATE in model_heads:
-            out_shape = tf.shape(logits)
-            labels_cropped = tf.image.resize_with_crop_or_pad(labels, out_shape[1], out_shape[2])
-
-            labels_n = tf.argmax(labels_cropped[..., 1:], 3)
-            accuracy_fn = lambda: tf.metrics.accuracy(labels_n, preds)
-
-            self.add_validation_metric(accuracy_fn, 'accuracy')
-
-            evaluate_ops = self.get_merged_validation_ops()
-            evaluate_head = ModelHeads.EvaluateHead(*evaluate_ops)
-
-        heads = []
-        for model_head in model_heads:
-            if model_head == ModelHeads.TRAIN:
-                heads.append(train_head)
-            elif model_head == ModelHeads.PREDICT:
-                heads.append(predict_head)
-            elif model_head == ModelHeads.EVALUATE:
-                heads.append(evaluate_head)
-            else:
-                raise NotImplementedError
-
-        return heads
+        super().compile(**kwargs)

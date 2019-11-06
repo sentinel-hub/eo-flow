@@ -204,6 +204,41 @@ def conv2d(input_, output_dim, is_training, k_size=3, im_stride=1, scope='conv2d
 
             return r_2d_2
 
+class Conv3D(layers.Layer):
+    def __init__(self, filters, kernel_size=3, strides=1, padding='VALID', add_dropout=True, dropout_rate=0.2,
+           batch_normalization=False, num_repetitions=1, convolve_time=True):
+        super().__init__()
+
+        repetitions = []
+
+        t_size = kernel_size if convolve_time else 1
+        kernel_shape = (t_size, kernel_size, kernel_size)
+
+        for i in range(num_repetitions):
+            layer = []
+            layer.append(layers.Conv3D(
+                filters=filters,
+                kernel_size=kernel_shape,
+                strides=strides,
+                padding=padding,
+                activation='relu'
+            ))
+
+            if batch_normalization:
+                layer.append(layers.BatchNormalization())
+
+            if add_dropout:
+                layer.append(layers.Dropout(rate=dropout_rate))
+
+            layer = tf.keras.Sequential(layer)
+
+            repetitions.append(layer)
+
+        self.combined_layer = tf.keras.Sequential(repetitions)
+
+    def call(self, inputs, training=False):
+        return self.combined_layer(inputs, training=training)
+
 
 def conv3d(input_, output_dim, is_training, k_size=3, im_stride=1, scope='conv3d', add_dropout=True, keep_prob=0.8,
            add_bn=False, single_filter=False, convolve_time=True, bias_init=0.0, padding='VALID'):
@@ -362,6 +397,25 @@ def max_pool_2d(input_, ksize=2, stride=2):
                           padding='SAME')
 
 
+class MaxPool3D(layers.Layer):
+    def __init__(self, kernel_size=2, strides=2, pool_time=False):
+        super().__init__()
+
+        tsize = kernel_size if pool_time else 1
+        tstride = strides if pool_time else 1
+
+        kernel_shape = (tsize, kernel_size, kernel_size)
+        strides = (tstride, strides, strides)
+
+        self.layer = layers.MaxPool3D(
+            pool_size=kernel_shape,
+            strides=strides,
+            padding='SAME'
+        )
+
+    def call(self, inputs, training=None):
+        return self.layer(inputs, training=training)
+
 def max_pool_3d(input_, ksize=2, stride=2, pool_time=False):
     """ Max pooling of a 5D tensor which represents either a 2D+t or 3D (multi-channel) input image
 
@@ -415,6 +469,38 @@ def conv2d_gru(input_, nfeats_out, k_size=3, scope='reduce_t', padding='VALID', 
 
         return outputs[:, -1, :, :, :]
 
+
+class Reduce3DTo2D(layers.Layer):
+    def __init__(self, filters, kernel_size=3, stride=1, add_dropout=False, dropout_rate=0.2):
+        super().__init__()
+
+        self.filters = filters
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.add_dropout = add_dropout
+        self.dropout_rate = dropout_rate
+
+    def build(self, input_size):
+        t_size = input_size[1]
+        layer = []
+        layer.append(layers.Conv3D(
+            self.filters,
+            kernel_size=(t_size, self.kernel_size, self.kernel_size),
+            strides=(1, self.stride, self.stride),
+            padding='VALID',
+            activation='relu'
+        ))
+
+        if self.add_dropout:
+            layer.append(layers.Dropout(rate=self.dropout_rate))
+
+        self.layer = tf.keras.Sequential(layer)
+
+    def call(self, inputs, training=None):
+        r = self.layer(inputs, training=training)
+
+        # Squeeze along temporal dimension
+        return tf.squeeze(r, axis=[1])
 
 def reduce_3d_to_2d(input_, nfeats_out, k_size=3, im_stride=1, add_dropout=False, keep_prob=.8, scope='reduce_t',
                     bias_init=0.0, padding='VALID', is_training=True):
