@@ -31,7 +31,7 @@ def eopatch_dataset(root_dir_or_list, features_data, fill_na=None):
     def _read_patch(path):
         """ TF op for reading an eopatch at a given path. """
         def _func(path):
-            path = path.decode('utf-8')
+            path = path.numpy().decode('utf-8')
 
             # Load only relevant features
             features = [(data[0], data[1]) for data in features_data]
@@ -49,7 +49,7 @@ def eopatch_dataset(root_dir_or_list, features_data, fill_na=None):
             return data
 
         out_types = [tf.as_dtype(data[3]) for data in features_data]
-        data = tf.py_func(_func, [path], out_types)
+        data = tf.py_function(_func, [path], out_types)
 
         out_data = {}
         for f_data, feature in zip(features_data, data):

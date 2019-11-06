@@ -89,9 +89,9 @@ def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=Fa
             return tl_x, tl_y
 
         if random_sampling:
-            x_samp, y_samp = tf.py_func(_py_get_random, [data[feat_name_ref]], [tf.int64, tf.int64])
+            x_samp, y_samp = tf.py_function(_py_get_random, [data[feat_name_ref]], [tf.int64, tf.int64])
         else:
-            x_samp, y_samp = tf.py_func(_py_get_gridded, [data[feat_name_ref]], [tf.int64, tf.int64])
+            x_samp, y_samp = tf.py_function(_py_get_gridded, [data[feat_name_ref]], [tf.int64, tf.int64])
 
 
         def _py_get_patches(axis):
@@ -133,7 +133,7 @@ def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=Fa
         for feat_name, axis in spatial_features_and_axis:
             ay, ax = axis
             shape = data[feat_name].shape.as_list()
-            patches = tf.py_func(_py_get_patches(axis), [data[feat_name], x_samp, y_samp], data[feat_name].dtype)
+            patches = tf.py_function(_py_get_patches(axis), [data[feat_name], x_samp, y_samp], data[feat_name].dtype)
 
             # Update shape information
             shape[ax] = patch_w
