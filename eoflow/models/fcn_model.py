@@ -6,9 +6,22 @@ from marshmallow import Schema, fields
 
 from ..base import BaseModel
 from .layers import Conv2D, Deconv2D, CropAndConcat
+from tensorflow.python.keras.engine import training_utils
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
+
+
+def crop_loss(loss_fn):
+    """ Wrapper loss. Crops labels to fit logits before applying the loss fn. """
+    def _loss_fn(labels, logits):
+        logits_shape = tf.shape(logits)
+        labels_crop = tf.image.resize_with_crop_or_pad(labels, logits_shape[1], logits_shape[2])
+    
+        return loss_fn(labels_crop, logits)
+    
+    return _loss_fn
+
 
 class FCNModel(BaseModel):
     """ Implementation of a vanilla Fully-Convolutional-Network (aka U-net) """
@@ -82,7 +95,6 @@ class FCNModel(BaseModel):
             batch_normalization=self.config.add_batch_norm,
             num_repetitions=2)(net)
 
-        print(bottom)
         self.connection_outputs = connection_outputs
         net = bottom
         # Decoding path
@@ -100,7 +112,6 @@ class FCNModel(BaseModel):
             #                        shape[2] * self.config.deconv_size,
             #                        features]
 
-            print("Got here")
             deconv = Deconv2D(
                 filters=features,
                 kernel_size=self.config.deconv_size,
@@ -132,3 +143,16 @@ class FCNModel(BaseModel):
 
     def call(self, inputs, training=None):
         return self.net(inputs, training)
+
+    def compile(self, **kwargs):
+        # Override the compile method to wrap the loss
+
+        if 'loss' in kwargs:
+            loss = kwargs['loss']
+            loss_fn = training_utils.get_loss_function(loss)
+
+            # Wrapp loss function
+            wrapped_loss_fn = crop_loss(loss_fn)
+            kwargs['loss'] = wrapped_loss_fn
+
+        super().compile(**kwargs)
