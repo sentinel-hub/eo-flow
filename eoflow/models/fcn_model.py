@@ -17,9 +17,9 @@ def crop_loss(loss_fn):
     def _loss_fn(labels, logits):
         logits_shape = tf.shape(logits)
         labels_crop = tf.image.resize_with_crop_or_pad(labels, logits_shape[1], logits_shape[2])
-    
+
         return loss_fn(labels_crop, logits)
-    
+
     return _loss_fn
 
 
@@ -47,9 +47,6 @@ class FCNModel(BaseModel):
         class_weights = fields.List(fields.Float, missing=None, description='Class weights used in training.')
 
         image_summaries = fields.Bool(missing=False, description='Record images summaries.')
-
-    def init_model(self):
-        pass
 
     def build(self, inputs_shape):
         """Builds the net for input x."""
@@ -83,7 +80,8 @@ class FCNModel(BaseModel):
             # max pooling operation
             net = layers.MaxPool2D(
                 pool_size=self.config.pool_size,
-                strides=self.config.pool_stride)(conv)
+                strides=self.config.pool_stride,
+                padding='SAME')(conv)
 
         # bank of 2 convolutional filters at bottom of U-net.
         bottom = Conv2D(
