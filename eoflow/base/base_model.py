@@ -18,7 +18,7 @@ class BaseModel(tf.keras.Model, Configurable):
     def init_model(self):
         pass
 
-    def build(self):
+    def build(self, inputs_shape):
         pass
 
     def call(self, inputs, training=False):
