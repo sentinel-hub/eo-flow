@@ -6,23 +6,15 @@ from marshmallow.validate import OneOf
 
 from ..base import BaseModel
 from .layers import Conv2D, Deconv2D, CropAndConcat, Conv3D, MaxPool3D, Reduce3DTo2D
+from .segmentation import BaseSegmentationModel
 from tensorflow.python.keras.engine import training_utils
 
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
 
-def crop_loss(loss_fn):
-    """ Wrapper loss. Crops labels to fit logits before applying the loss fn. """
-    def _loss_fn(labels, logits):
-        logits_shape = tf.shape(logits)
-        labels_crop = tf.image.resize_with_crop_or_pad(labels, logits_shape[1], logits_shape[2])
 
-        return loss_fn(labels_crop, logits)
-
-    return _loss_fn
-
-class TFCNModel(BaseModel):
+class TFCNModel(BaseSegmentationModel):
     """ Implementation of a Temporal Fully-Convolutional-Network """
 
     class TFCNModelSchema(Schema):
@@ -148,16 +140,3 @@ class TFCNModel(BaseModel):
 
     def call(self, inputs, training=None):
         return self.net(inputs, training)
-
-    def compile(self, **kwargs):
-        # Override the compile method to wrap the loss
-
-        if 'loss' in kwargs:
-            loss = kwargs['loss']
-            loss_fn = training_utils.get_loss_function(loss)
-
-            # Wrapp loss function
-            wrapped_loss_fn = crop_loss(loss_fn)
-            kwargs['loss'] = wrapped_loss_fn
-
-        super().compile(**kwargs)

@@ -6,24 +6,14 @@ from marshmallow import Schema, fields
 
 from ..base import BaseModel
 from .layers import Conv2D, Deconv2D, CropAndConcat
+from .segmentation import BaseSegmentationModel
 from tensorflow.python.keras.engine import training_utils
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
 
 
-def crop_loss(loss_fn):
-    """ Wrapper loss. Crops labels to fit logits before applying the loss fn. """
-    def _loss_fn(labels, logits):
-        logits_shape = tf.shape(logits)
-        labels_crop = tf.image.resize_with_crop_or_pad(labels, logits_shape[1], logits_shape[2])
-
-        return loss_fn(labels_crop, logits)
-
-    return _loss_fn
-
-
-class FCNModel(BaseModel):
+class FCNModel(BaseSegmentationModel):
     """ Implementation of a vanilla Fully-Convolutional-Network (aka U-net) """
 
     class FCNModelSchema(Schema):
@@ -91,7 +81,8 @@ class FCNModel(BaseModel):
             add_dropout=self.config.add_dropout,
             dropout_rate=dropout_rate,
             batch_normalization=self.config.add_batch_norm,
-            num_repetitions=2)(net)
+            num_repetitions=2,
+            padding=self.config.padding)(net)
 
         self.connection_outputs = connection_outputs
         net = bottom
@@ -138,19 +129,5 @@ class FCNModel(BaseModel):
 
         self.net = tf.keras.Model(inputs=x, outputs=logits)
 
-
     def call(self, inputs, training=None):
         return self.net(inputs, training)
-
-    def compile(self, **kwargs):
-        # Override the compile method to wrap the loss
-
-        if 'loss' in kwargs:
-            loss = kwargs['loss']
-            loss_fn = training_utils.get_loss_function(loss)
-
-            # Wrapp loss function
-            wrapped_loss_fn = crop_loss(loss_fn)
-            kwargs['loss'] = wrapped_loss_fn
-
-        super().compile(**kwargs)
