@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO,
 class FCNModel(BaseSegmentationModel):
     """ Implementation of a vanilla Fully-Convolutional-Network (aka U-net) """
 
-    class FCNModelSchema(Schema):
+    class FCNModelSchema(BaseSegmentationModel._Schema):
         learning_rate = fields.Float(missing=None, description='Learning rate used in training.', example=0.01)
         n_layers = fields.Int(required=True, description='Number of layers of the FCN model', example=10)
         n_classes = fields.Int(required=True, description='Number of classes', example=2)

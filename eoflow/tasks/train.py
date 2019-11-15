@@ -33,11 +33,7 @@ class TrainTask(BaseTask):
     def run(self):
         dataset = self.parse_input()
 
-        self.model.compile(
-            optimizer='adam',
-            loss='cross-entropy',
-            metrics=['accuracy']
-        )
+        self.model.prepare()
         
         self.model.train(
             dataset,

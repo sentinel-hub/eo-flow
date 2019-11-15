@@ -16,13 +16,20 @@ class BaseModel(tf.keras.Model, Configurable):
         self.init_model()
 
     def init_model(self):
+        """ Called on __init__. Keras model initialization. If model does not require the inputs shape, create it here. """
         pass
 
     def build(self, inputs_shape):
+        """ Keras method. Called once to build the model. Build the model here if the input shape is required. """
         pass
 
     def call(self, inputs, training=False):
+        """ Runs the model with inputs. """
         pass
+
+    def prepare(self):
+        """ Prepares the model for training and evaluation. Call the compile method from here. """
+        raise NotImplementedError
 
     def train(self,
               dataset,

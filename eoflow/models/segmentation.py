@@ -3,6 +3,7 @@ import tensorflow as tf
 from tensorflow.keras import layers
 import numpy as np
 from marshmallow import Schema, fields
+from marshmallow.validate import OneOf, ContainsOnly
 
 from ..base import BaseModel
 from .layers import Conv2D, Deconv2D, CropAndConcat
@@ -12,7 +13,6 @@ import types
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
-
 
 # Available losses
 segmentation_losses = {
@@ -60,11 +60,26 @@ class CroppedMetric(tf.keras.metrics.Metric):
 class BaseSegmentationModel(BaseModel):
     """ Base for segmentation models. """
 
+    class _Schema(Schema):
+        learning_rate = fields.Float(missing=None, description='Learning rate used in training.', example=0.01)
+        loss = fields.String(missing='cross-entropy', description='Loss function used for training.',
+                             validate=OneOf(segmentation_losses.keys()))
+        metrics = fields.List(fields.String, missing=['accuracy'], description='List of metrics used for evaluation.',
+                              validate=ContainsOnly(segmentation_metrics.keys()))
+
+    def prepare(self):
+        optimizer = tf.keras.optimizers.Adam(learning_rate=self.config.learning_rate)
+        loss = self.config.loss
+        metrics = self.config.metrics
+
+        self.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+
     def compile(self, **kwargs):
         # Override the compile method to wrap the loss and metrics
 
         if 'loss' in kwargs:
             loss_fn = kwargs['loss']
+            # If loss is in segmentation_losses, use it
             if loss_fn in segmentation_losses:
                 loss_fn = segmentation_losses[loss_fn]
 
@@ -72,6 +87,7 @@ class BaseSegmentationModel(BaseModel):
             kwargs['loss'] = wrapped_loss_fn
 
         if 'metrics' in kwargs:
+            # If metric is in segmentation_metrics, use it
             metrics = [segmentation_metrics[metric] if metric in segmentation_metrics else metric for metric in kwargs['metrics']]
             wrapped_metrics = [CroppedMetric(metric) for metric in metrics]
 

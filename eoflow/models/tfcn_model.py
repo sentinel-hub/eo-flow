@@ -17,8 +17,7 @@ logging.basicConfig(level=logging.INFO,
 class TFCNModel(BaseSegmentationModel):
     """ Implementation of a Temporal Fully-Convolutional-Network """
 
-    class TFCNModelSchema(Schema):
-        learning_rate = fields.Float(missing=None, description='Learning rate used in training.', example=0.01)
+    class TFCNModelSchema(BaseSegmentationModel._Schema):
         n_layers = fields.Int(required=True, description='Number of layers of the FCN model', example=10)
         n_classes = fields.Int(required=True, description='Number of classes', example=2)
         keep_prob = fields.Float(required=True, description='Keep probability used in dropout layers.', example=0.5)
@@ -39,8 +38,6 @@ class TFCNModel(BaseSegmentationModel):
         pool_time = fields.Bool(missing=False, description='Operate pooling over time dimension.')
 
         class_weights = fields.List(fields.Float, missing=None, description='Class weights used in training.')
-        loss = fields.String(missing='cross-entropy', description='Loss function used in training.',
-                             validate=OneOf(['cross-entropy', 'iou', 'combined']))
 
         image_summaries = fields.Bool(missing=False, description='Record images summaries.')
 

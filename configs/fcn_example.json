@@ -15,7 +15,9 @@
             "bias_init": 0.0,
             "padding": "VALID",
             "pool_size": 2,
-            "pool_stride": 2
+            "pool_stride": 2,
+            "loss": "cross-entropy",
+            "metrics": ["accuracy"]
         }
     },
     "task": {
