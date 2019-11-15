@@ -23,3 +23,25 @@ class BaseModel(tf.keras.Model, Configurable):
 
     def call(self, inputs, training=False):
         pass
+
+    def train(self,
+              dataset,
+              num_epochs,
+              model_directory,
+              save_steps='epoch',
+              summary_steps=1,
+              **kwargs):
+
+        logs_path = os.path.join(model_directory, 'logs')
+        checkpoints_path = os.path.join(model_directory, 'checkpoints', 'model.ckpt')
+
+        # Tensorboard callback
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logs_path, update_freq=summary_steps)
+
+        # Checkpoint saving callback
+        checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(checkpoints_path, save_freq=save_steps)
+
+        return self.fit(dataset,
+                        epochs=num_epochs,
+                        callbacks=[tensorboard_callback, checkpoint_callback],
+                        **kwargs)

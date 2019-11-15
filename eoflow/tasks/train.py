@@ -28,19 +28,24 @@ class TrainTask(BaseTask):
 
         model_input = cls(config)
 
-        dataset_fn = model_input.get_dataset
-        return dataset_fn
+        return model_input.get_dataset()
 
     def run(self):
-        dataset_fn = self.parse_input()
+        dataset = self.parse_input()
+
+        self.model.compile(
+            optimizer='adam',
+            loss='cross-entropy',
+            metrics=['accuracy']
+        )
         
-        self.model.train(dataset_fn,
-                         num_epochs=self.config.num_epochs,
-                         model_directory=self.config.model_directory,
-                         save_steps=self.config.save_steps,
-                         summary_steps=self.config.summary_steps,
-                         progress_steps=self.config.progress_steps
-                         )
+        self.model.train(
+            dataset,
+            num_epochs=self.config.num_epochs,
+            model_directory=self.config.model_directory,
+            save_steps=self.config.save_steps,
+            summary_steps=self.config.summary_steps
+        )
 
 
 class TrainAndEvaluateTask(BaseTask):
