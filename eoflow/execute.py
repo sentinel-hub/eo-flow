@@ -13,12 +13,12 @@ class ExecutionConfig(Schema):
 
 def execute(config_file):
     """Executes a workflow defined in a config file."""
-    
+
     with open(config_file) as file:
         config = json.load(file)
 
     config = Config(ExecutionConfig().load(config))
-    
+
     # Parse model config
     model_cls = parse_classname(config.model.classname)
     if not issubclass(model_cls, BaseModel):

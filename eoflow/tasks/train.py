@@ -21,7 +21,7 @@ class TrainTask(BaseTask):
         dataset = self.parse_input(self.config.input_config)
 
         self.model.prepare()
-        
+
         self.model.train(
             dataset,
             num_epochs=self.config.num_epochs,
@@ -48,7 +48,7 @@ class TrainAndEvaluateTask(BaseTask):
         val_dataset = self.parse_input(self.config.val_input_config)
 
         self.model.prepare()
-        
+
         self.model.train_and_evaluate(
             train_dataset, val_dataset,
             num_epochs=self.config.num_epochs,

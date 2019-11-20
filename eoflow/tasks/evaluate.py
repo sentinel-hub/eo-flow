@@ -17,7 +17,7 @@ class EvaluateTask(BaseTask):
         dataset = self.parse_input(self.config.input_config)
 
         # TODO: self.config.model_directory
-        
+
         values = self.model.evaluate(dataset)
         names = self.model.metrics_names
 

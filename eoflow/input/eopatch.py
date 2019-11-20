@@ -64,8 +64,8 @@ def eopatch_dataset(root_dir_or_list, features_data, fill_na=None):
 
 
 class EOPatchSegmentationInput(BaseInput):
-    """ An input method for basic EOPatch reading. Reads features and segmentation labels. For more complex behaviour 
-        (subpatch extraction, data augmentation, caching, ...) create your own input method (see examples). 
+    """ An input method for basic EOPatch reading. Reads features and segmentation labels. For more complex behaviour
+        (subpatch extraction, data augmentation, caching, ...) create your own input method (see examples).
     """
 
     class _Schema(Schema):

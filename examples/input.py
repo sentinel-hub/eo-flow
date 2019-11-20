@@ -22,7 +22,7 @@ class ExampleInput(BaseInput):
 
     def _generate_batch(self):
         """ Generator that returns random features and labels. """
-        
+
         for i in range(self.config.batches_per_epoch):
             input_shape = [self.config.batch_size] + self.config.input_shape
             input_data = np.random.rand(*input_shape)

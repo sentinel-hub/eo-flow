@@ -22,5 +22,5 @@ class BaseTask(Configurable):
 
     def run(self):
         """Executes the task."""
-        
+
         raise NotImplementedError

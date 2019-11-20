@@ -7,7 +7,6 @@ from marshmallow.validate import OneOf, ContainsOnly
 
 from ..base import BaseModel
 from .layers import Conv2D, Deconv2D, CropAndConcat
-from tensorflow.python.keras.engine import training_utils
 
 import types
 
@@ -41,12 +40,12 @@ class CroppedMetric(tf.keras.metrics.Metric):
     def __init__(self, metric):
         super().__init__(name=metric.name, dtype=metric.dtype)
         self.metric = metric
-    
+
     def update_state(self, y_true, y_pred, sample_weight=None):
         logits_shape = tf.shape(y_pred)
         labels_crop = tf.image.resize_with_crop_or_pad(y_true, logits_shape[1], logits_shape[2])
 
-        return self.metric.update_state(labels_crop, y_pred, sample_weight)      
+        return self.metric.update_state(labels_crop, y_pred, sample_weight)
 
     def result(self):
         return self.metric.result()
@@ -88,7 +87,7 @@ class BaseSegmentationModel(BaseModel):
         for metric in metrics:
             if metric in segmentation_metrics:
                 metric = segmentation_metrics[metric]
-                
+
             wrapped_metric = CroppedMetric(metric)
             wrapped_metrics.append(wrapped_metric)
 

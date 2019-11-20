@@ -5,8 +5,8 @@ import tensorflow as tf
 from ..utils import create_dirs
 
 def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=False, num_random_samples=20, grid_overlap=0.2):
-    """ Builds a TF op for building a dataset of subpatches from tensors. Subpatches sampling can be random or grid based. 
-    
+    """ Builds a TF op for building a dataset of subpatches from tensors. Subpatches sampling can be random or grid based.
+
     :param patch_size: Width and height of extracted patches
     :type patch_size: (int, int)
     :param spatial_features_and_axis: List of features from which subpatches are extracted and their height and width axis.
@@ -149,8 +149,8 @@ def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=Fa
     return _fn
 
 def augment_data(features_to_augment, brightness_delta=0.1, contrast_bounds=(0.9,1.1)):
-    """ Builds a function that randomly augments features in specified ways. 
-    
+    """ Builds a function that randomly augments features in specified ways.
+
     param features_to_augment: List of features to augment and which operations to perform on them.
                                Each element is of shape (feature, list_of_operations).
     type features_to_augment: list of (str, list of str)
@@ -159,7 +159,7 @@ def augment_data(features_to_augment, brightness_delta=0.1, contrast_bounds=(0.9
     param contrast_bounds: Upper and lower bounds of contrast multiplier.
     type contrast_bounds: (float, float)
     """
-    
+
     def _augment(data):
         contrast_lower, contrast_upper = contrast_bounds
 
@@ -181,7 +181,7 @@ def augment_data(features_to_augment, brightness_delta=0.1, contrast_bounds=(0.9
             for op in ops:
                 operation_fn = operations[op]
                 data[feature] = operation_fn(data[feature])
-        
+
         return data
 
     return _augment

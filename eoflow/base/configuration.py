@@ -29,7 +29,7 @@ class Configurable(ABC):
 
     @classmethod
     def initialize_schema(cls):
-        """ A Schema should be provided as an internal class of any class that inherits from Configurable. 
+        """ A Schema should be provided as an internal class of any class that inherits from Configurable.
         This method finds the Schema by traversing the inheritance tree. If no Schema is provided or inherited
         an error is raised.
         """
