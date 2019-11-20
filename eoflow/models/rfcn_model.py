@@ -126,6 +126,7 @@ class RFCNModel(BaseModel):
                          add_bn=self.config.add_batch_norm,
                          padding=self.config.padding)
         # final 1x1 convolution corresponding to pixel-wise linear combination of feature channels
+        # TODO: when converting use keras Conv2D with kernel size 1
         logits = conv1d(net,
                         self.config.n_classes,
                         scope='logits',
