@@ -37,8 +37,6 @@
             },
             "save_steps": 100,
             "summary_steps": 50,
-            "progress_steps": 1
         }
     }
   }
-  
