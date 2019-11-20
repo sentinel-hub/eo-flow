@@ -27,8 +27,12 @@ class BaseModel(tf.keras.Model, Configurable):
         """ Runs the model with inputs. """
         pass
 
-    def prepare(self):
-        """ Prepares the model for training and evaluation. Call the compile method from here. """
+    def prepare(self, optimizer=None, loss=None, metrics=None, **kwargs):
+        """ Prepares the model for training and evaluation. This method should create the
+        optimizer, loss and metric functions and call the compile method of the model. The model
+        should provide the defaults for the optimizer, loss and metrics, which can be overriden
+        with custom arguments. """
+
         raise NotImplementedError
 
     def load_latest(self, model_directory):
@@ -45,6 +49,23 @@ class BaseModel(tf.keras.Model, Configurable):
               save_steps='epoch',
               summary_steps=1,
               **kwargs):
+        """ Trains the model on a given dataset. Takes care of saving the model and recording summaries.
+
+        :param dataset: A tf.data Dataset containing the input training data.
+            The dataset must be of shape (features, labels) where features and labels contain the data
+            in the shape required by the model.
+        :type dataset: tf.data.Dataset
+        :param num_epochs: Number of epochs. One epoch is equal to one pass over the dataset.
+        :type num_epochs: int
+        :param model_directory: Output directory, where the model checkpoints and summaries are saved.
+        :type model_directory: str
+        :param save_steps: Number of steps between saving model checkpoints.
+        :type save_steps: int
+        :param summary_steps: Number of steps between recodring summaries.
+        :type summary_steps: int
+
+        Other keyword parameters are passed to the Model.fit method.
+        """
 
         logs_path = os.path.join(model_directory, 'logs')
         checkpoints_path = os.path.join(model_directory, 'checkpoints', 'model.ckpt')
@@ -67,13 +88,13 @@ class BaseModel(tf.keras.Model, Configurable):
         """ Trains the model on a given dataset. At the end of each epoch an evaluation is performed on the provided
             validation dataset. Takes care of saving the model and recording summaries.
 
-        :param train_dataset_fn: A function that builds and returns a tf.data.Dataset containing the input training data.
+        :param train_dataset: A tf.data Dataset containing the input training data.
             The dataset must be of shape (features, labels) where features and labels contain the data
             in the shape required by the model.
-        :type train_dataset_fn: function
-        :param val_dataset_fn: Same as for `train_dataset_fn`, but for the validation data.
-        :type val_dataset_fn: function
-        :param num_epochs: Number of epochs.
+        :type train_dataset: tf.data.Dataset
+        :param val_dataset_fn: Same as for `train_dataset`, but for the validation data.
+        :type val_dataset_fn: tf.data.Dataset
+        :param num_epochs: Number of epochs. Epoch size is independent from the dataset size.
         :type num_epochs: int
         :param iterations_per_epoch: Number of training steps to make every epoch.
             Training dataset is repeated automatically when the end is reached.
@@ -84,8 +105,8 @@ class BaseModel(tf.keras.Model, Configurable):
         :type save_steps: int
         :param summary_steps: Number of steps between recodring summaries.
         :type summary_steps: int
-        :param progress_steps: Number of steps between outputing progress to stdout.
-        :type progress_steps: int
+
+        Other keyword parameters are passed to the Model.fit method.
         """
 
         logs_path = os.path.join(model_directory, 'logs')

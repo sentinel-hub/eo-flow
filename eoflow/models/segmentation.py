@@ -13,12 +13,12 @@ import types
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
 
-# Available losses
+# Available losses. Add keys with new losses here.
 segmentation_losses = {
     'cross-entropy': tf.keras.losses.CategoricalCrossentropy(from_logits=True)
 }
 
-# Available metrics
+# Available metrics. Add keys with new metrics here.
 segmentation_metrics = {
     'accuracy': tf.keras.metrics.CategoricalAccuracy(name='accuracy')
 }
@@ -66,7 +66,15 @@ class BaseSegmentationModel(BaseModel):
         metrics = fields.List(fields.String, missing=['accuracy'], description='List of metrics used for evaluation.',
                               validate=ContainsOnly(segmentation_metrics.keys()))
 
-    def prepare(self, optimizer=None, loss=None, metrics=None):
+    def prepare(self, optimizer=None, loss=None, metrics=None, **kwargs):
+        """ Prepares the model. Optimizer, loss and metrics are read using the following protocol:
+        * If an argument is None, the default value is used from the configuration of the model.
+        * If an argument is a key contained in segmentation specific losses/metrics, those are used.
+        * Otherwise the argument is passed to `compile` as is.
+
+        """
+
+        # Read defaults if None
         if optimizer is None:
             optimizer = tf.keras.optimizers.Adam(learning_rate=self.config.learning_rate)
 
@@ -91,4 +99,4 @@ class BaseSegmentationModel(BaseModel):
             wrapped_metric = CroppedMetric(metric)
             wrapped_metrics.append(wrapped_metric)
 
-        self.compile(optimizer=optimizer, loss=wrapped_loss, metrics=wrapped_metrics)
+        self.compile(optimizer=optimizer, loss=wrapped_loss, metrics=wrapped_metrics, **kwargs)
