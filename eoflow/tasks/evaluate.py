@@ -16,7 +16,7 @@ class EvaluateTask(BaseTask):
     def run(self):
         dataset = self.parse_input(self.config.input_config)
 
-        self.model.prepare() # TODO: find a way to initialize without compiling the model
+        self.model.prepare()
         self.model.load_latest(self.config.model_directory)
 
         values = self.model.evaluate(dataset)

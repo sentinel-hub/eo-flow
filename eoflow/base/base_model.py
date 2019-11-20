@@ -36,7 +36,7 @@ class BaseModel(tf.keras.Model, Configurable):
 
         checkpoints_path = os.path.join(model_directory, 'checkpoints', 'model.ckpt')
 
-        return self.load_weights(checkpoints_path)
+        return self.load_weights(checkpoints_path).expect_partial()
 
     def train(self,
               dataset,
@@ -53,7 +53,9 @@ class BaseModel(tf.keras.Model, Configurable):
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logs_path, update_freq=summary_steps)
 
         # Checkpoint saving callback
-        checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(checkpoints_path, save_freq=save_steps)
+        checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(checkpoints_path,
+                                                                 save_freq=save_steps,
+                                                                 save_weights_only=True)
 
         return self.fit(dataset,
                         epochs=num_epochs,
@@ -93,7 +95,9 @@ class BaseModel(tf.keras.Model, Configurable):
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logs_path, update_freq=summary_steps)
 
         # Checkpoint saving callback
-        checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(checkpoints_path, save_freq=save_steps)
+        checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(checkpoints_path,
+                                                                 save_freq=save_steps,
+                                                                 save_weights_only=True)
 
         # Repeat training dataset indefenetly
         train_dataset = train_dataset.repeat()
