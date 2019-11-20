@@ -16,22 +16,9 @@ class TrainTask(BaseTask):
 
         save_steps = fields.Int(missing=100, description="Number of training steps between model checkpoints.")
         summary_steps = fields.Int(missing=10, description="Number of training steps between recording summaries.")
-        progress_steps = fields.Int(missing=100, description="Number of training steps between writing progress messages.")
-
-    def parse_input(self):
-        input_config = self.config.input_config
-        classname, config = input_config.classname, input_config.config
-
-        cls = parse_classname(classname)
-        if not issubclass(cls, BaseInput):
-            raise ValueError("Data input class does not inherit from BaseInput.")
-
-        model_input = cls(config)
-
-        return model_input.get_dataset()
 
     def run(self):
-        dataset = self.parse_input()
+        dataset = self.parse_input(self.config.input_config)
 
         self.model.prepare()
         
@@ -55,30 +42,18 @@ class TrainAndEvaluateTask(BaseTask):
 
         save_steps = fields.Int(missing=100, description="Number of training steps between model checkpoints.")
         summary_steps = fields.Int(missing=10, description="Number of training steps between recording summaries.")
-        progress_steps = fields.Int(missing=100, description="Number of training steps between writing progress messages.")
-
-    def parse_input(self, input_config):
-        classname, config = input_config.classname, input_config.config
-
-        cls = parse_classname(classname)
-        if not issubclass(cls, BaseInput):
-            raise ValueError("Data input class does not inherit from BaseInput.")
-
-        model_input = cls(config)
-
-        dataset_fn = model_input.get_dataset
-        return dataset_fn
 
     def run(self):
-        train_dataset_fn = self.parse_input(self.config.train_input_config)
-        val_dataset_fn = self.parse_input(self.config.val_input_config)
+        train_dataset = self.parse_input(self.config.train_input_config)
+        val_dataset = self.parse_input(self.config.val_input_config)
+
+        self.model.prepare()
         
         self.model.train_and_evaluate(
-            train_dataset_fn, val_dataset_fn,
+            train_dataset, val_dataset,
             num_epochs=self.config.num_epochs,
             iterations_per_epoch=self.config.iterations_per_epoch,
             model_directory=self.config.model_directory,
             save_steps=self.config.save_steps,
-            summary_steps=self.config.summary_steps,
-            progress_steps=self.config.progress_steps
+            summary_steps=self.config.summary_steps
         )
