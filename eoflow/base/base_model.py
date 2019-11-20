@@ -31,6 +31,13 @@ class BaseModel(tf.keras.Model, Configurable):
         """ Prepares the model for training and evaluation. Call the compile method from here. """
         raise NotImplementedError
 
+    def load_latest(self, model_directory):
+        """ Loads weights from the latest checkpoint in the model directory. """
+
+        checkpoints_path = os.path.join(model_directory, 'checkpoints', 'model.ckpt')
+
+        return self.load_weights(checkpoints_path)
+
     def train(self,
               dataset,
               num_epochs,
