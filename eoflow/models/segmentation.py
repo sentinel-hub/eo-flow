@@ -43,6 +43,7 @@ class CroppedMetric(tf.keras.metrics.Metric):
         self.metric = metric
     
     def update_state(self, y_true, y_pred, sample_weight=None):
+        print(y_true, y_pred)
         logits_shape = tf.shape(y_pred)
         labels_crop = tf.image.resize_with_crop_or_pad(y_true, logits_shape[1], logits_shape[2])
 
@@ -69,28 +70,21 @@ class BaseSegmentationModel(BaseModel):
 
     def prepare(self):
         optimizer = tf.keras.optimizers.Adam(learning_rate=self.config.learning_rate)
+
+        # Wrap loss function
         loss = self.config.loss
+        if loss in segmentation_losses:
+            loss = segmentation_losses[loss]
+        wrapped_loss = cropped_loss(loss)
+
+        # Wrap metrics
         metrics = self.config.metrics
+        wrapped_metrics = []
+        for metric in metrics:
+            if metric in segmentation_metrics:
+                metric = segmentation_metrics[metric]
+                
+            wrapped_metric = CroppedMetric(metric)
+            wrapped_metrics.append(wrapped_metric)
 
-        self.compile(optimizer=optimizer, loss=loss, metrics=metrics)
-
-    def compile(self, **kwargs):
-        # Override the compile method to wrap the loss and metrics
-
-        if 'loss' in kwargs:
-            loss_fn = kwargs['loss']
-            # If loss is in segmentation_losses, use it
-            if loss_fn in segmentation_losses:
-                loss_fn = segmentation_losses[loss_fn]
-
-            wrapped_loss_fn = cropped_loss(loss_fn)
-            kwargs['loss'] = wrapped_loss_fn
-
-        if 'metrics' in kwargs:
-            # If metric is in segmentation_metrics, use it
-            metrics = [segmentation_metrics[metric] if metric in segmentation_metrics else metric for metric in kwargs['metrics']]
-            wrapped_metrics = [CroppedMetric(metric) for metric in metrics]
-
-            kwargs['metrics'] = wrapped_metrics
-
-        super().compile(**kwargs)
+        self.compile(optimizer=optimizer, loss=wrapped_loss, metrics=wrapped_metrics)
