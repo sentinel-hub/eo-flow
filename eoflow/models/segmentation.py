@@ -43,7 +43,6 @@ class CroppedMetric(tf.keras.metrics.Metric):
         self.metric = metric
     
     def update_state(self, y_true, y_pred, sample_weight=None):
-        print(y_true, y_pred)
         logits_shape = tf.shape(y_pred)
         labels_crop = tf.image.resize_with_crop_or_pad(y_true, logits_shape[1], logits_shape[2])
 
@@ -68,8 +67,15 @@ class BaseSegmentationModel(BaseModel):
         metrics = fields.List(fields.String, missing=['accuracy'], description='List of metrics used for evaluation.',
                               validate=ContainsOnly(segmentation_metrics.keys()))
 
-    def prepare(self):
-        optimizer = tf.keras.optimizers.Adam(learning_rate=self.config.learning_rate)
+    def prepare(self, optimizer=None, loss=None, metrics=None):
+        if optimizer is None:
+            optimizer = tf.keras.optimizers.Adam(learning_rate=self.config.learning_rate)
+
+        if loss is None:
+            loss = self.config.loss
+
+        if metrics is None:
+            metrics = self.config.metrics
 
         # Wrap loss function
         loss = self.config.loss
@@ -78,7 +84,6 @@ class BaseSegmentationModel(BaseModel):
         wrapped_loss = cropped_loss(loss)
 
         # Wrap metrics
-        metrics = self.config.metrics
         wrapped_metrics = []
         for metric in metrics:
             if metric in segmentation_metrics:
