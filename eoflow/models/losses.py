@@ -2,26 +2,27 @@ import tensorflow as tf
 from tensorflow.keras.losses import Loss, Reduction
 
 class CategoricalFocalLoss(Loss):
-    """
-    Softmax version of focal loss.
-            m
-        FL = ∑  -alpha * (1 - p_o,c)^gamma * y_o,c * log(p_o,c)
-            c=1
-        where m = number of classes, c = class and o = observation
-    Parameters:
-        alpha -- the same as weighing factor in balanced cross entropy
-        gamma -- focusing parameter for modulating factor (1-p)
-    Default value:
-        gamma -- 2.0 as mentioned in the paper
-        alpha -- 0.25 as mentioned in the paper
+    """ Categorical version of focal loss.
+
     References:
         Official paper: https://arxiv.org/pdf/1708.02002.pdf
-        https://www.tensorflow.org/api_docs/python/tf/keras/backend/categorical_crossentropy
-    Usage:
-        model.compile(loss=[categorical_focal_loss(alpha=.25, gamma=2)], metrics=["accuracy"], optimizer=adam)
+        Keras implementation: https://github.com/umbertogriffo/focal-loss-keras
     """
 
     def __init__(self, gamma=2., alpha=.25, from_logits=True, reduction=Reduction.AUTO, name='FocalLoss'):
+        """Categorical version of focal loss.
+
+        :param gamma: gamma value, defaults to 2.
+        :type gamma: float
+        :param alpha: alpha value, defaults to .25
+        :type alpha: float
+        :param from_logits: Whether predictions are logits or softmax, defaults to True
+        :type from_logits: bool
+        :param reduction: reduction to be used, defaults to Reduction.AUTO
+        :type reduction: tf.keras.losses.Reduction, optional
+        :param name: name of the loss, defaults to 'FocalLoss'
+        :type name: str
+        """
         super().__init__(reduction=reduction, name=name)
 
         self.gamma = gamma
@@ -29,11 +30,6 @@ class CategoricalFocalLoss(Loss):
         self.from_logits = from_logits
 
     def call(self, y_true, y_pred):
-        """
-        :param y_true: A tensor of the same shape as `y_pred`
-        :param y_pred: A logits tensor
-        :return: Output tensor.
-        """
 
         # Perform softmax
         if self.from_logits:
