@@ -20,6 +20,7 @@
             "single_encoding_conv": true,
             "conv_size_reduce": 3,
             "loss": "focal_loss",
+            "metrics": ["accuracy", "iou"],
             "image_summaries": true
         }
     },

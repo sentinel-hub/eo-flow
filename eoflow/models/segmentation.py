@@ -68,7 +68,7 @@ class BaseSegmentationModel(BaseModel):
         learning_rate = fields.Float(missing=None, description='Learning rate used in training.', example=0.01)
         loss = fields.String(missing='cross_entropy', description='Loss function used for training.',
                              validate=OneOf(segmentation_losses.keys()))
-        metrics = fields.List(fields.String, missing=['accuracy'], description='List of metrics used for evaluation.',
+        metrics = fields.List(fields.String, missing=['accuracy', 'iou'], description='List of metrics used for evaluation.',
                               validate=ContainsOnly(segmentation_metrics.keys()))
 
     def prepare(self, optimizer=None, loss=None, metrics=None, **kwargs):
