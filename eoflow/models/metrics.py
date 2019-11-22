@@ -8,7 +8,7 @@ class InitializableMetric(tf.keras.metrics.Metric):
         super().__init__(*args, **kwargs)
         self.initialized = False
 
-    def init_from_config(self, model_config):
+    def init_from_config(self, model_config=None):
         """ Initializes the metric from configuration. """
 
         self.initialized = True
@@ -17,7 +17,7 @@ class InitializableMetric(tf.keras.metrics.Metric):
         """ Checks if the metric is initialized. """
 
         if not self.initialized:
-            raise AssertionError("InitializableMetric was not initialized before use.")
+            raise ValueError("InitializableMetric was not initialized before use.")
 
 class MeanIoU(InitializableMetric):
     """ Computes mean intersection over union metric for semantic segmentation.
@@ -38,13 +38,13 @@ class MeanIoU(InitializableMetric):
         self.default_max_classes = default_max_classes
         self.metric = None
 
-    def init_from_config(self, model_config):
+    def init_from_config(self, model_config=None):
         super().init_from_config(model_config)
 
-        if 'n_classes' in model_config:
-            self.metric = tf.keras.metrics.MeanIoU(num_classes=model_config.n_classes)
+        if model_config is not None and 'n_classes' in model_config:
+            self.metric = tf.keras.metrics.MeanIoU(num_classes=model_config['n_classes'])
         else:
-            print("n_classes not found in model config. Using default max value.")
+            print("n_classes not found in model config or model config not provided. Using default max value.")
             self.metric = tf.keras.metrics.MeanIoU(num_classes=self.default_max_classes)
 
     def update_state(self, y_true, y_pred, sample_weight=None):
