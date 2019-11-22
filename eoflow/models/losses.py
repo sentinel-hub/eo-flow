@@ -45,4 +45,7 @@ class CategoricalFocalLoss(Loss):
         # Calculate Focal Loss
         loss = self.alpha * tf.math.pow(1 - y_pred, self.gamma) * cross_entropy
 
+        # Sum over classes
+        loss = tf.reduce_sum(loss, axis=-1)
+
         return loss
