@@ -37,8 +37,8 @@ class TestMeanIoU(unittest.TestCase):
         # Predict everything as class 1
         y_pred = np.stack([zeros, ones], axis=-1)
 
-        y_true1 = np.stack([ones, zeros], axis=-1) # Always class 0
-        y_true2 = np.stack([zeros, ones], axis=-1) # Always class 1
+        y_true1 = np.stack([ones, zeros], axis=-1) # All class 0
+        y_true2 = np.stack([zeros, ones], axis=-1) # All class 1
         y_true3 = np.stack([mixed, 1-mixed], axis=-1) # Half class 1, half class 0
 
         # Check each one seperately
