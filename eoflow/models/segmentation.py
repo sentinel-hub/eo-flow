@@ -7,6 +7,7 @@ from marshmallow.validate import OneOf, ContainsOnly
 
 from ..base import BaseModel
 from .layers import Conv2D, Deconv2D, CropAndConcat
+from .losses import CategoricalFocalLoss
 
 import types
 
@@ -15,7 +16,8 @@ logging.basicConfig(level=logging.INFO,
 
 # Available losses. Add keys with new losses here.
 segmentation_losses = {
-    'cross-entropy': tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+    'cross_entropy': tf.keras.losses.CategoricalCrossentropy(from_logits=True),
+    'focal_loss': CategoricalFocalLoss(from_logits=True)
 }
 
 # Available metrics. Add keys with new metrics here.
@@ -61,7 +63,7 @@ class BaseSegmentationModel(BaseModel):
 
     class _Schema(Schema):
         learning_rate = fields.Float(missing=None, description='Learning rate used in training.', example=0.01)
-        loss = fields.String(missing='cross-entropy', description='Loss function used for training.',
+        loss = fields.String(missing='cross_entropy', description='Loss function used for training.',
                              validate=OneOf(segmentation_losses.keys()))
         metrics = fields.List(fields.String, missing=['accuracy'], description='List of metrics used for evaluation.',
                               validate=ContainsOnly(segmentation_metrics.keys()))
