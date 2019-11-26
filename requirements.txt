@@ -1,7 +1,7 @@
 eo-learn-core
 eo-learn-io
 munch
-tensorflow
+tensorflow>=2.0
 marshmallow
 numpy
 tqdm
