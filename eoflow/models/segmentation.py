@@ -1,9 +1,18 @@
+import os
 import logging
 import tensorflow as tf
+from tensorflow.keras import layers
+import numpy as np
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 from marshmallow import Schema, fields
 from marshmallow.validate import OneOf, ContainsOnly
 
 from ..base import BaseModel
+from .layers import Conv2D, Deconv2D, CropAndConcat
+from ..utils.tf_utils import plot_to_image
+
+import types
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
@@ -55,6 +64,64 @@ class CroppedMetric(tf.keras.metrics.Metric):
     def get_config(self):
         return self.metric.get_config()
 
+class VisualizationCallback(tf.keras.callbacks.Callback):
+    def __init__(self, val_images, log_dir, time_index=0, rgb_indices=[0,1,2]):
+        super().__init__()
+
+        self.val_images = val_images
+        self.time_index = time_index
+        self.rgb_indices = rgb_indices
+
+        self.file_writer = tf.summary.create_file_writer(os.path.join(log_dir, 'predictions'))
+
+    def plot_predictions(self, input_image, labels, predictions, n_classes):
+        fig,(ax1,ax2,ax3) = plt.subplots(1, 3, figsize=(18, 5))
+
+        scaled_image = np.clip(input_image*1.5, 0., 1.)
+        ax1.imshow(scaled_image)
+        ax1.title.set_text('Input image (first slice)')
+
+        cnorm = mpl.colors.NoNorm()
+        cmap = plt.cm.get_cmap('Set3', n_classes)
+
+        ax2.imshow(labels, cmap=cmap, norm=cnorm)
+        ax2.title.set_text('Labeled classes')
+
+        img = ax3.imshow(predictions, cmap=cmap, norm=cnorm)
+        ax3.title.set_text('Predicted classes')
+
+        plt.colorbar(img, ax=[ax1,ax2,ax3], shrink=0.8, ticks=list(range(n_classes)))
+
+        return fig
+
+    def on_epoch_end(self, epoch, logs=None):
+
+        images = []
+        for image, labels_raw in self.val_images:
+            pred_raw = self.model.predict(image)
+            pred_shape = tf.shape(pred_raw)
+
+            if image.ndim == 5:
+                image = image[:, self.time_index, :, :, :]
+
+            labels_raw = tf.image.resize_with_crop_or_pad(labels_raw, pred_shape[1], pred_shape[2])
+            image = tf.image.resize_with_crop_or_pad(image, pred_shape[1], pred_shape[2])
+
+            pred = np.argmax(pred_raw, axis=-1)
+            labels = np.argmax(labels_raw, axis=-1)
+            num_classes = labels_raw.shape[-1]
+
+            image = image.numpy()[...,self.rgb_indices]
+
+            fig = self.plot_predictions(image[0], labels[0], pred[0], num_classes)
+            img = plot_to_image(fig)
+
+            images.append(img)
+
+        images = tf.concat(images, axis=0)
+
+        with self.file_writer.as_default():
+            tf.summary.image('predictions', images, step=epoch)
 
 class BaseSegmentationModel(BaseModel):
     """ Base for segmentation models. """

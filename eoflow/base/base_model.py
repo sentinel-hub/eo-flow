@@ -51,6 +51,7 @@ class BaseModel(tf.keras.Model, Configurable):
               model_directory,
               save_steps='epoch',
               summary_steps=1,
+              callbacks=[],
               **kwargs):
         """ Trains the model on a given dataset. Takes care of saving the model and recording summaries.
 
@@ -83,11 +84,11 @@ class BaseModel(tf.keras.Model, Configurable):
 
         return self.fit(dataset,
                         epochs=num_epochs,
-                        callbacks=[tensorboard_callback, checkpoint_callback],
+                        callbacks=[tensorboard_callback, checkpoint_callback] + callbacks,
                         **kwargs)
 
     def train_and_evaluate(self, train_dataset, val_dataset, num_epochs, iterations_per_epoch, model_directory,
-                           save_steps=100, summary_steps=10, **kwargs):
+                           save_steps=100, summary_steps=10, callbacks=[], **kwargs):
         """ Trains the model on a given dataset. At the end of each epoch an evaluation is performed on the provided
             validation dataset. Takes care of saving the model and recording summaries.
 
@@ -130,5 +131,5 @@ class BaseModel(tf.keras.Model, Configurable):
                         validation_data=val_dataset,
                         epochs=num_epochs,
                         steps_per_epoch=iterations_per_epoch,
-                        callbacks=[tensorboard_callback, checkpoint_callback],
+                        callbacks=[tensorboard_callback, checkpoint_callback] + callbacks,
                         **kwargs)
