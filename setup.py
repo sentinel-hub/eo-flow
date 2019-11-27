@@ -17,5 +17,8 @@ setup(
     author='Sinergise EO research team',
     author_email='eoresearch@sinergise.com',
     packages=find_packages(),
-    install_requires=parse_requirements('requirements.txt')
+    install_requires=parse_requirements('requirements.txt'),
+    extras_require={
+        'DEV': parse_requirements('requirements-dev.txt')
+    }
 )
