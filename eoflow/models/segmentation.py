@@ -89,6 +89,7 @@ class VisualizationCallback(tf.keras.callbacks.Callback):
         self.file_writer = tf.summary.create_file_writer(log_dir)
 
     def plot_predictions(self, input_image, labels, predictions, n_classes):
+        # TODO: fix figsize (too wide?)
         fig,(ax1,ax2,ax3) = plt.subplots(1, 3, figsize=(18, 5))
 
         scaled_image = np.clip(input_image*2.5, 0., 1.)
