@@ -77,7 +77,7 @@ class VisualizationCallback(tf.keras.callbacks.Callback):
     def plot_predictions(self, input_image, labels, predictions, n_classes):
         fig,(ax1,ax2,ax3) = plt.subplots(1, 3, figsize=(18, 5))
 
-        scaled_image = np.clip(input_image*1.5, 0., 1.)
+        scaled_image = np.clip(input_image*2.5, 0., 1.)
         ax1.imshow(scaled_image)
         ax1.title.set_text('Input image (first slice)')
 
@@ -94,34 +94,46 @@ class VisualizationCallback(tf.keras.callbacks.Callback):
 
         return fig
 
-    def on_epoch_end(self, epoch, logs=None):
+    def prediction_summaries(self, step):
+        images, labels = self.val_images
+        preds_raw = self.model.predict(images)
 
-        images = []
-        for image, labels_raw in self.val_images:
-            pred_raw = self.model.predict(image)
-            pred_shape = tf.shape(pred_raw)
+        pred_shape = tf.shape(preds_raw)
 
-            if image.ndim == 5:
-                image = image[:, self.time_index, :, :, :]
+        # If temporal data only use time_index slice
+        if images.ndim == 5:
+            images = images[:, self.time_index, :, :, :]
 
-            labels_raw = tf.image.resize_with_crop_or_pad(labels_raw, pred_shape[1], pred_shape[2])
-            image = tf.image.resize_with_crop_or_pad(image, pred_shape[1], pred_shape[2])
+        # Crop images and labels to output size
+        labels = tf.image.resize_with_crop_or_pad(labels, pred_shape[1], pred_shape[2])
+        images = tf.image.resize_with_crop_or_pad(images, pred_shape[1], pred_shape[2])
 
-            pred = np.argmax(pred_raw, axis=-1)
-            labels = np.argmax(labels_raw, axis=-1)
-            num_classes = labels_raw.shape[-1]
+        # Take RGB values
+        images = images.numpy()[...,self.rgb_indices]
 
-            image = image.numpy()[...,self.rgb_indices]
+        num_classes = labels.shape[-1]
 
-            fig = self.plot_predictions(image[0], labels[0], pred[0], num_classes)
+        # Get class ids
+        preds_raw = np.argmax(preds_raw, axis=-1)
+        labels = np.argmax(labels, axis=-1)
+
+        vis_images = []
+        for image_i, labels_i, pred_i in zip(images, labels, preds_raw):
+            # Plot predictions and convert to image
+            fig = self.plot_predictions(image_i, labels_i, pred_i, num_classes)
             img = plot_to_image(fig)
 
-            images.append(img)
+            vis_images.append(img)
 
-        images = tf.concat(images, axis=0)
+        n_images = len(vis_images)
+        vis_images = tf.concat(vis_images, axis=0)
 
         with self.file_writer.as_default():
-            tf.summary.image('predictions', images, step=epoch)
+            tf.summary.image('predictions', vis_images, step=step, max_outputs=n_images)
+
+    def on_epoch_end(self, epoch, logs=None):
+        self.prediction_summaries(epoch)
+
 
 class BaseSegmentationModel(BaseModel):
     """ Base for segmentation models. """
@@ -132,6 +144,9 @@ class BaseSegmentationModel(BaseModel):
                              validate=OneOf(segmentation_losses.keys()))
         metrics = fields.List(fields.String, missing=['accuracy'], description='List of metrics used for evaluation.',
                               validate=ContainsOnly(segmentation_metrics.keys()))
+
+        prediction_visualization = fields.Bool(missing=False, description='Record prediction visualization summaries.')
+        prediction_visualization_num = fields.Int(missing=5, description='Number of images used for prediction visualization.')
 
     def prepare(self, optimizer=None, loss=None, metrics=None, **kwargs):
         """ Prepares the model. Optimizer, loss and metrics are read using the following protocol:
@@ -166,3 +181,37 @@ class BaseSegmentationModel(BaseModel):
             wrapped_metrics.append(wrapped_metric)
 
         self.compile(optimizer=optimizer, loss=wrapped_loss, metrics=wrapped_metrics, **kwargs)
+
+
+    def _get_visualization_callback(self, dataset, log_dir):
+        ds = dataset.unbatch().batch(self.config.prediction_visualization_num).take(1)
+        data = next(iter(ds))
+
+        visualization_callback = VisualizationCallback(data, log_dir)
+        return visualization_callback
+
+    def train(self, dataset, num_epochs, model_directory, callbacks=[],
+              save_steps='epoch', summary_steps=1, **kwargs):
+
+        custom_callbacks = []
+
+        if self.config.prediction_visualization:
+            log_dir = os.path.join(model_directory, 'logs', 'predictions')
+            visualization_callback = self._get_visualization_callback(dataset, log_dir)
+            custom_callbacks.append(visualization_callback)
+
+        super().train(dataset, num_epochs, model_directory, callbacks=callbacks + custom_callbacks,
+                      save_steps=save_steps, summary_steps=summary_steps, **kwargs)
+
+    def train_and_evaluate(self, train_dataset, val_dataset, num_epochs, iterations_per_epoch, model_directory,
+                           save_steps=100, summary_steps=10, callbacks=[], **kwargs):
+
+        custom_callbacks = []
+
+        if self.config.prediction_visualization:
+            log_dir = os.path.join(model_directory, 'logs', 'predictions')
+            visualization_callback = self._get_visualization_callback(val_dataset, log_dir)
+            custom_callbacks.append(visualization_callback)
+
+        super().train_and_evaluate(train_dataset, val_dataset, num_epochs, iterations_per_epoch, model_directory,
+                                   save_steps=save_steps, summary_steps=summary_steps, callbacks=callbacks + custom_callbacks, **kwargs)
