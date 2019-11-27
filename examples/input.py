@@ -58,6 +58,7 @@ class EOPatchInputExample(BaseInput):
         num_subpatches = fields.Int(required=True, description="Number of subpatches extracted by random sampling.", example=5)
 
         interleave_size = fields.Int(description="Number of eopatches to interleave the subpatches from.", required=True, example=5)
+        data_augmentation = fields.Bool(missing=False, description="Use data augmentation on images.")
 
         cache_file = fields.String(
             missing=None, description="A path to the file where the dataset will be cached. No caching if not provided.", example='/tmp/data')
@@ -93,11 +94,12 @@ class EOPatchInputExample(BaseInput):
             dataset = cache_dataset(dataset, self.config.cache_file)
 
         # Data augmentation
-        feature_augmentation = [
-            ('features', ['flip_left_right', 'rotate', 'brightness']),
-            ('labels', ['flip_left_right', 'rotate'])
-        ]
-        dataset = dataset.map(augment_data(feature_augmentation))
+        if cfg.data_augmentation:
+            feature_augmentation = [
+                ('features', ['flip_left_right', 'rotate', 'brightness']),
+                ('labels', ['flip_left_right', 'rotate'])
+            ]
+            dataset = dataset.map(augment_data(feature_augmentation))
 
         # One-hot encode labels and return tuple
         def _prepare_data(data):
