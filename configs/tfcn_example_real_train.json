@@ -46,7 +46,8 @@
                     "batch_size": 5,
                     "num_classes": 10,
                     "cache_file": "./temp/tfcn_svn_lulc/dataset/cache",
-                    "num_subpatches": 5
+                    "num_subpatches": 5,
+                    "data_augmentation": true
                 }
             },
             "save_steps": 100,
