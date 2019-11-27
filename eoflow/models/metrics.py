@@ -19,6 +19,7 @@ class InitializableMetric(tf.keras.metrics.Metric):
         if not self.initialized:
             raise ValueError("InitializableMetric was not initialized before use.")
 
+
 class MeanIoU(InitializableMetric):
     """ Computes mean intersection over union metric for semantic segmentation.
     Wraps keras MeanIoU to work on logits. """

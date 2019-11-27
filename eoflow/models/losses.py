@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras.losses import Loss, Reduction
 
+
 class CategoricalFocalLoss(Loss):
     """ Categorical version of focal loss.
 
