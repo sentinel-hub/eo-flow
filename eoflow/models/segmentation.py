@@ -65,14 +65,26 @@ class CroppedMetric(tf.keras.metrics.Metric):
         return self.metric.get_config()
 
 class VisualizationCallback(tf.keras.callbacks.Callback):
+    """ Keras Callback for saving prediction visualizations to TensorBoard. """
+
     def __init__(self, val_images, log_dir, time_index=0, rgb_indices=[0,1,2]):
+        """
+        :param val_images: Images to run predictions on. Tuple of (images, labels).
+        :type val_images: (np.array, np.array)
+        :param log_dir: Directory where the TensorBoard logs are written.
+        :type log_dir: str
+        :param time_index: Time index to use, when multiple time slices are available, defaults to 0
+        :type time_index: int, optional
+        :param rgb_indices: Indices for R, G and B bands in the input image, defaults to [0,1,2]
+        :type rgb_indices: list, optional
+        """
         super().__init__()
 
         self.val_images = val_images
         self.time_index = time_index
         self.rgb_indices = rgb_indices
 
-        self.file_writer = tf.summary.create_file_writer(os.path.join(log_dir, 'predictions'))
+        self.file_writer = tf.summary.create_file_writer(log_dir)
 
     def plot_predictions(self, input_image, labels, predictions, n_classes):
         fig,(ax1,ax2,ax3) = plt.subplots(1, 3, figsize=(18, 5))
