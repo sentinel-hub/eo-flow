@@ -34,8 +34,6 @@ class TFCNModel(BaseSegmentationModel):
 
         class_weights = fields.List(fields.Float, missing=None, description='Class weights used in training.')
 
-        image_summaries = fields.Bool(missing=False, description='Record images summaries.')
-
     def build(self, inputs_shape):
 
         x = tf.keras.layers.Input(inputs_shape[1:])

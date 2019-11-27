@@ -18,8 +18,7 @@
             "pool_stride": 2,
             "pool_time": false,
             "single_encoding_conv": true,
-            "conv_size_reduce": 3,
-            "image_summaries": true
+            "conv_size_reduce": 3
         }
     },
     "task": {

@@ -32,8 +32,6 @@ class RFCNModel(BaseModel):
 
         class_weights = fields.List(fields.Float, missing=None, description='Class weights used in training.')
 
-        image_summaries = fields.Bool(missing=False, description='Record images summaries.')
-
     def _net(self, x, is_training):
 
         net = x
