@@ -4,6 +4,8 @@ from marshmallow import Schema, fields
 from marshmallow.validate import OneOf, ContainsOnly
 
 from ..base import BaseModel
+from .losses import CategoricalFocalLoss
+from .metrics import MeanIoU, InitializableMetric
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
@@ -11,13 +13,15 @@ logging.basicConfig(level=logging.INFO,
 
 # Available losses. Add keys with new losses here.
 segmentation_losses = {
-    'cross-entropy': tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+    'cross_entropy': tf.keras.losses.CategoricalCrossentropy(from_logits=True),
+    'focal_loss': CategoricalFocalLoss(from_logits=True)
 }
 
 
 # Available metrics. Add keys with new metrics here.
 segmentation_metrics = {
-    'accuracy': tf.keras.metrics.CategoricalAccuracy(name='accuracy')
+    'accuracy': tf.keras.metrics.CategoricalAccuracy(name='accuracy'),
+    'iou': MeanIoU(default_max_classes=32)
 }
 
 
@@ -60,10 +64,12 @@ class BaseSegmentationModel(BaseModel):
     """ Base for segmentation models. """
 
     class _Schema(Schema):
+        n_classes = fields.Int(required=True, description='Number of classes', example=2)
         learning_rate = fields.Float(missing=None, description='Learning rate used in training.', example=0.01)
-        loss = fields.String(missing='cross-entropy', description='Loss function used for training.',
+        loss = fields.String(missing='cross_entropy', description='Loss function used for training.',
                              validate=OneOf(segmentation_losses.keys()))
-        metrics = fields.List(fields.String, missing=['accuracy'], description='List of metrics used for evaluation.',
+        metrics = fields.List(fields.String, missing=['accuracy', 'iou'],
+                              description='List of metrics used for evaluation.',
                               validate=ContainsOnly(segmentation_metrics.keys()))
 
     def prepare(self, optimizer=None, loss=None, metrics=None, **kwargs):
@@ -92,8 +98,13 @@ class BaseSegmentationModel(BaseModel):
         # Wrap metrics
         wrapped_metrics = []
         for metric in metrics:
+
             if metric in segmentation_metrics:
                 metric = segmentation_metrics[metric]
+
+            # Initialize initializable metrics
+            if isinstance(metric, InitializableMetric):
+                metric.init_from_config(self.config)
 
             wrapped_metric = CroppedMetric(metric)
             wrapped_metrics.append(wrapped_metric)
