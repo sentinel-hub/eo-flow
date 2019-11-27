@@ -1,17 +1,15 @@
-import os
-
-import tensorflow as tf
 from marshmallow import Schema, fields
 
-from ..base import Configurable, BaseTask, BaseInput
+from ..base import BaseTask
 from ..base.configuration import ObjectConfiguration
-from ..utils import parse_classname, create_dirs
+
 
 class EvaluateTask(BaseTask):
     class EvaluateTaskConfig(Schema):
         model_directory = fields.String(required=True, description='Directory of the model', example='/tmp/model/')
 
-        input_config = fields.Nested(nested=ObjectConfiguration, required=True, description="Input type and configuration.")
+        input_config = fields.Nested(nested=ObjectConfiguration, required=True,
+                                     description="Input type and configuration.")
 
     def run(self):
         dataset = self.parse_input(self.config.input_config)

@@ -1,21 +1,20 @@
 from .conv_cells import ConvGRUCell
 import tensorflow as tf
-from tensorflow.keras import layers
 import numpy as np
 
 
-class Conv2D(layers.Layer):
+class Conv2D(tf.keras.layers.Layer):
     """ Multiple repetitions of 2d convolution, batch normalization and dropout layers. """
 
     def __init__(self, filters, kernel_size=3, strides=1, padding='VALID', add_dropout=True, dropout_rate=0.2,
-           batch_normalization=False, num_repetitions=1):
+                 batch_normalization=False, num_repetitions=1):
         super().__init__()
 
         repetitions = []
 
         for i in range(num_repetitions):
             layer = []
-            layer.append(layers.Conv2D(
+            layer.append(tf.keras.layers.Conv2D(
                 filters=filters,
                 kernel_size=kernel_size,
                 strides=strides,
@@ -24,10 +23,10 @@ class Conv2D(layers.Layer):
             ))
 
             if batch_normalization:
-                layer.append(layers.BatchNormalization())
+                layer.append(tf.keras.layers.BatchNormalization())
 
             if add_dropout:
-                layer.append(layers.Dropout(rate=dropout_rate))
+                layer.append(tf.keras.layers.Dropout(rate=dropout_rate))
 
             layer = tf.keras.Sequential(layer)
 
@@ -39,11 +38,11 @@ class Conv2D(layers.Layer):
         return self.combined_layer(inputs, training=training)
 
 
-class Conv3D(layers.Layer):
+class Conv3D(tf.keras.layers.Layer):
     """ Multiple repetitions of 3d convolution, batch normalization and dropout layers. """
 
     def __init__(self, filters, kernel_size=3, strides=1, padding='VALID', add_dropout=True, dropout_rate=0.2,
-           batch_normalization=False, num_repetitions=1, convolve_time=True):
+                 batch_normalization=False, num_repetitions=1, convolve_time=True):
         super().__init__()
 
         repetitions = []
@@ -53,7 +52,7 @@ class Conv3D(layers.Layer):
 
         for i in range(num_repetitions):
             layer = []
-            layer.append(layers.Conv3D(
+            layer.append(tf.keras.layers.Conv3D(
                 filters=filters,
                 kernel_size=kernel_shape,
                 strides=strides,
@@ -62,10 +61,10 @@ class Conv3D(layers.Layer):
             ))
 
             if batch_normalization:
-                layer.append(layers.BatchNormalization())
+                layer.append(tf.keras.layers.BatchNormalization())
 
             if add_dropout:
-                layer.append(layers.Dropout(rate=dropout_rate))
+                layer.append(tf.keras.layers.Dropout(rate=dropout_rate))
 
             layer = tf.keras.Sequential(layer)
 
@@ -77,14 +76,14 @@ class Conv3D(layers.Layer):
         return self.combined_layer(inputs, training=training)
 
 
-class Deconv2D(layers.Layer):
+class Deconv2D(tf.keras.layers.Layer):
     """ 2d transpose convolution with optional batch normalization. """
 
     def __init__(self, filters, kernel_size=2, batch_normalization=False):
         super().__init__()
 
         layer = []
-        layer.append(layers.Conv2DTranspose(
+        layer.append(tf.keras.layers.Conv2DTranspose(
             filters=filters,
             kernel_size=kernel_size,
             strides=kernel_size,
@@ -93,7 +92,7 @@ class Deconv2D(layers.Layer):
         ))
 
         if batch_normalization:
-            layer.append(layers.BatchNormalization())
+            layer.append(tf.keras.layers.BatchNormalization())
 
         self.layer = tf.keras.Sequential(layer)
 
@@ -101,10 +100,10 @@ class Deconv2D(layers.Layer):
         return self.layer(inputs, training=training)
 
 
-class CropAndConcat(layers.Layer):
+class CropAndConcat(tf.keras.layers.Layer):
     """ Layer that crops the first tensor and concatenates it with the second. Used for skip connections. """
-
-    def call(self, x1, x2, training=None):
+    @staticmethod
+    def call(x1, x2):
         # Crop x1 to shape of x2
         x2_shape = tf.shape(x2)
         x1_crop = tf.image.resize_with_crop_or_pad(x1, x2_shape[1], x2_shape[2])
@@ -113,7 +112,7 @@ class CropAndConcat(layers.Layer):
         return tf.concat([x1_crop, x2], axis=-1)
 
 
-class MaxPool3D(layers.Layer):
+class MaxPool3D(tf.keras.layers.Layer):
     def __init__(self, kernel_size=2, strides=2, pool_time=False):
         super().__init__()
 
@@ -123,7 +122,7 @@ class MaxPool3D(layers.Layer):
         kernel_shape = (tsize, kernel_size, kernel_size)
         strides = (tstride, strides, strides)
 
-        self.layer = layers.MaxPool3D(
+        self.layer = tf.keras.layers.MaxPool3D(
             pool_size=kernel_shape,
             strides=strides,
             padding='SAME'
@@ -133,7 +132,7 @@ class MaxPool3D(layers.Layer):
         return self.layer(inputs, training=training)
 
 
-class Reduce3DTo2D(layers.Layer):
+class Reduce3DTo2D(tf.keras.layers.Layer):
     """ Reduces 3d representations into 2d using 3d convolution over the whole time dimension. """
 
     def __init__(self, filters, kernel_size=3, stride=1, add_dropout=False, dropout_rate=0.2):
@@ -144,11 +143,12 @@ class Reduce3DTo2D(layers.Layer):
         self.stride = stride
         self.add_dropout = add_dropout
         self.dropout_rate = dropout_rate
+        self.layer = None
 
     def build(self, input_size):
         t_size = input_size[1]
         layer = []
-        layer.append(layers.Conv3D(
+        layer.append(tf.keras.layers.Conv3D(
             self.filters,
             kernel_size=(t_size, self.kernel_size, self.kernel_size),
             strides=(1, self.stride, self.stride),
@@ -157,7 +157,7 @@ class Reduce3DTo2D(layers.Layer):
         ))
 
         if self.add_dropout:
-            layer.append(layers.Dropout(rate=self.dropout_rate))
+            layer.append(tf.keras.layers.Dropout(rate=self.dropout_rate))
 
         self.layer = tf.keras.Sequential(layer)
 
@@ -202,6 +202,7 @@ def conv2d_gru(input_, nfeats_out, k_size=3, scope='reduce_t', padding='VALID', 
             return outputs
 
         return outputs[:, -1, :, :, :]
+
 
 def weighted_cross_entropy(flat_logits, flat_labels, class_weights):
     """ Compute weighted cross-entropy assigning different weights to different classes

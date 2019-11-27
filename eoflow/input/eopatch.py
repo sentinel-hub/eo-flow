@@ -10,6 +10,7 @@ from .operations import extract_subpatches, augment_data, cache_dataset
 
 _valid_types = [t.value for t in FeatureType]
 
+
 def eopatch_dataset(root_dir_or_list, features_data, fill_na=None):
     """ Creates a tf dataset with features from saved EOPatches.
 

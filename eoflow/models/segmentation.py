@@ -1,19 +1,15 @@
 import logging
 import tensorflow as tf
-from tensorflow.keras import layers
-import numpy as np
 from marshmallow import Schema, fields
 from marshmallow.validate import OneOf, ContainsOnly
 
 from ..base import BaseModel
-from .layers import Conv2D, Deconv2D, CropAndConcat
 from .losses import CategoricalFocalLoss
 from .metrics import MeanIoU, InitializableMetric
 
-import types
-
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
+
 
 # Available losses. Add keys with new losses here.
 segmentation_losses = {
@@ -21,11 +17,13 @@ segmentation_losses = {
     'focal_loss': CategoricalFocalLoss(from_logits=True)
 }
 
+
 # Available metrics. Add keys with new metrics here.
 segmentation_metrics = {
     'accuracy': tf.keras.metrics.CategoricalAccuracy(name='accuracy'),
     'iou': MeanIoU(default_max_classes=32)
 }
+
 
 def cropped_loss(loss_fn):
     """ Wraps loss function. Crops the labels to match the logits size. """
@@ -37,6 +35,7 @@ def cropped_loss(loss_fn):
         return loss_fn(labels_crop, logits)
 
     return _loss_fn
+
 
 class CroppedMetric(tf.keras.metrics.Metric):
     """ Wraps a metric. Crops the labels to match the logits size. """
@@ -60,6 +59,7 @@ class CroppedMetric(tf.keras.metrics.Metric):
     def get_config(self):
         return self.metric.get_config()
 
+
 class BaseSegmentationModel(BaseModel):
     """ Base for segmentation models. """
 
@@ -68,7 +68,8 @@ class BaseSegmentationModel(BaseModel):
         learning_rate = fields.Float(missing=None, description='Learning rate used in training.', example=0.01)
         loss = fields.String(missing='cross_entropy', description='Loss function used for training.',
                              validate=OneOf(segmentation_losses.keys()))
-        metrics = fields.List(fields.String, missing=['accuracy', 'iou'], description='List of metrics used for evaluation.',
+        metrics = fields.List(fields.String, missing=['accuracy', 'iou'],
+                              description='List of metrics used for evaluation.',
                               validate=ContainsOnly(segmentation_metrics.keys()))
 
     def prepare(self, optimizer=None, loss=None, metrics=None, **kwargs):
@@ -90,7 +91,6 @@ class BaseSegmentationModel(BaseModel):
             metrics = self.config.metrics
 
         # Wrap loss function
-        loss = self.config.loss
         if loss in segmentation_losses:
             loss = segmentation_losses[loss]
         wrapped_loss = cropped_loss(loss)
