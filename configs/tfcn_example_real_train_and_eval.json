@@ -20,14 +20,15 @@
             "single_encoding_conv": true,
             "conv_size_reduce": 3,
             "loss": "cross-entropy",
-            "image_summaries": true
+            "image_summaries": true,
+            "prediction_visualization": true
         }
     },
     "task": {
         "classname": "eoflow.tasks.TrainAndEvaluateTask",
         "config": {
             "num_epochs": 100,
-            "iterations_per_epoch": 100,
+            "iterations_per_epoch": 10,
             "model_directory": "./temp/tfcn_svn_lulc",
             "train_input_config":{
                 "classname": "examples.input.EOPatchInputExample",
