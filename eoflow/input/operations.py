@@ -4,9 +4,10 @@ import tensorflow as tf
 
 from ..utils import create_dirs
 
+
 def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=False, num_random_samples=20, grid_overlap=0.2):
-    """ Builds a TF op for building a dataset of subpatches from tensors. Subpatches sampling can be random or grid based. 
-    
+    """ Builds a TF op for building a dataset of subpatches from tensors. Subpatches sampling can be random or grid based.
+
     :param patch_size: Width and height of extracted patches
     :type patch_size: (int, int)
     :param spatial_features_and_axis: List of features from which subpatches are extracted and their height and width axis.
@@ -89,9 +90,9 @@ def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=Fa
             return tl_x, tl_y
 
         if random_sampling:
-            x_samp, y_samp = tf.py_func(_py_get_random, [data[feat_name_ref]], [tf.int64, tf.int64])
+            x_samp, y_samp = tf.py_function(_py_get_random, [data[feat_name_ref]], [tf.int64, tf.int64])
         else:
-            x_samp, y_samp = tf.py_func(_py_get_gridded, [data[feat_name_ref]], [tf.int64, tf.int64])
+            x_samp, y_samp = tf.py_function(_py_get_gridded, [data[feat_name_ref]], [tf.int64, tf.int64])
 
 
         def _py_get_patches(axis):
@@ -133,7 +134,7 @@ def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=Fa
         for feat_name, axis in spatial_features_and_axis:
             ay, ax = axis
             shape = data[feat_name].shape.as_list()
-            patches = tf.py_func(_py_get_patches(axis), [data[feat_name], x_samp, y_samp], data[feat_name].dtype)
+            patches = tf.py_function(_py_get_patches(axis), [data[feat_name], x_samp, y_samp], data[feat_name].dtype)
 
             # Update shape information
             shape[ax] = patch_w
@@ -148,9 +149,10 @@ def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=Fa
 
     return _fn
 
+
 def augment_data(features_to_augment, brightness_delta=0.1, contrast_bounds=(0.9,1.1)):
-    """ Builds a function that randomly augments features in specified ways. 
-    
+    """ Builds a function that randomly augments features in specified ways.
+
     param features_to_augment: List of features to augment and which operations to perform on them.
                                Each element is of shape (feature, list_of_operations).
     type features_to_augment: list of (str, list of str)
@@ -159,7 +161,7 @@ def augment_data(features_to_augment, brightness_delta=0.1, contrast_bounds=(0.9
     param contrast_bounds: Upper and lower bounds of contrast multiplier.
     type contrast_bounds: (float, float)
     """
-    
+
     def _augment(data):
         contrast_lower, contrast_upper = contrast_bounds
 
@@ -181,10 +183,11 @@ def augment_data(features_to_augment, brightness_delta=0.1, contrast_bounds=(0.9
             for op in ops:
                 operation_fn = operations[op]
                 data[feature] = operation_fn(data[feature])
-        
+
         return data
 
     return _augment
+
 
 def cache_dataset(dataset, path):
     """ Caches dataset into a file. Each element in the dataset will be computed only once. """

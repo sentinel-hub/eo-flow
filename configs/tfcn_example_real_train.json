@@ -49,9 +49,7 @@
                 }
             },
             "save_steps": 100,
-            "summary_steps": 10,
-            "progress_steps": 1
+            "summary_steps": 10
         }
     }
   }
-  

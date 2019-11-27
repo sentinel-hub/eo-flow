@@ -30,13 +30,11 @@
                     "output_shape": [128, 128],
                     "num_classes": 3,
                     "batch_size": 1,
-                    "batches_per_epoch": 1000
+                    "batches_per_epoch": 200
                 }
             },
             "save_steps": 100,
-            "summary_steps": 50,
-            "progress_steps": 1
+            "summary_steps": 50
         }
     }
   }
-  

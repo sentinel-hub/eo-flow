@@ -32,9 +32,7 @@
                 }
             },
             "save_steps": 400,
-            "summary_steps": 50,
-            "progress_steps": 100
+            "summary_steps": 50
         }
     }
   }
-  
