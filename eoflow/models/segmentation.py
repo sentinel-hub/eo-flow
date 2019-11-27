@@ -79,7 +79,7 @@ class VisualizationCallback(tf.keras.callbacks.Callback):
 
         scaled_image = np.clip(input_image*2.5, 0., 1.)
         ax1.imshow(scaled_image)
-        ax1.title.set_text('Input image (first slice)')
+        ax1.title.set_text('Input image')
 
         cnorm = mpl.colors.NoNorm()
         cmap = plt.cm.get_cmap('Set3', n_classes)
@@ -190,6 +190,7 @@ class BaseSegmentationModel(BaseModel):
         visualization_callback = VisualizationCallback(data, log_dir)
         return visualization_callback
 
+    # Override default method to add prediction visualization
     def train(self, dataset, num_epochs, model_directory, callbacks=[],
               save_steps='epoch', summary_steps=1, **kwargs):
 
@@ -203,6 +204,7 @@ class BaseSegmentationModel(BaseModel):
         super().train(dataset, num_epochs, model_directory, callbacks=callbacks + custom_callbacks,
                       save_steps=save_steps, summary_steps=summary_steps, **kwargs)
 
+    # Override default method to add prediction visualization
     def train_and_evaluate(self, train_dataset, val_dataset, num_epochs, iterations_per_epoch, model_directory,
                            save_steps=100, summary_steps=10, callbacks=[], **kwargs):
 
