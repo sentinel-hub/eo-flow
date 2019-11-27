@@ -4,6 +4,7 @@ from marshmallow import fields, Schema
 
 from ..base import BaseInput
 
+
 class RandomClassificationInput(BaseInput):
     """ Class to create random batches for classification tasks. Can be used for prototyping. """
 

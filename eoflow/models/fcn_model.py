@@ -1,13 +1,9 @@
 import logging
 import tensorflow as tf
-from tensorflow.keras import layers
-import numpy as np
 from marshmallow import Schema, fields
 
-from ..base import BaseModel
 from .layers import Conv2D, Deconv2D, CropAndConcat
 from .segmentation import BaseSegmentationModel
-from tensorflow.python.keras.engine import training_utils
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
@@ -41,7 +37,7 @@ class FCNModel(BaseSegmentationModel):
     def build(self, inputs_shape):
         """Builds the net for input x."""
 
-        x = layers.Input(inputs_shape[1:])
+        x = tf.keras.layers.Input(inputs_shape[1:])
         dropout_rate = 1 - self.config.keep_prob
 
         # Encoding path
@@ -68,7 +64,7 @@ class FCNModel(BaseSegmentationModel):
             connection_outputs.append(conv)
 
             # max pooling operation
-            net = layers.MaxPool2D(
+            net = tf.keras.layers.MaxPool2D(
                 pool_size=self.config.pool_size,
                 strides=self.config.pool_stride,
                 padding='SAME')(conv)
@@ -123,7 +119,7 @@ class FCNModel(BaseSegmentationModel):
                 padding=self.config.padding)(cc)
 
         # final 1x1 convolution corresponding to pixel-wise linear combination of feature channels
-        logits = layers.Conv2D(
+        logits = tf.keras.layers.Conv2D(
                 filters=self.config.n_classes,
                 kernel_size=1)(net)
 

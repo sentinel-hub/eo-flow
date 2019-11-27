@@ -1,27 +1,25 @@
 import logging
 import tensorflow as tf
-from tensorflow.keras import layers
-import numpy as np
 from marshmallow import Schema, fields
 from marshmallow.validate import OneOf, ContainsOnly
 
 from ..base import BaseModel
-from .layers import Conv2D, Deconv2D, CropAndConcat
-
-import types
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
+
 
 # Available losses. Add keys with new losses here.
 segmentation_losses = {
     'cross-entropy': tf.keras.losses.CategoricalCrossentropy(from_logits=True)
 }
 
+
 # Available metrics. Add keys with new metrics here.
 segmentation_metrics = {
     'accuracy': tf.keras.metrics.CategoricalAccuracy(name='accuracy')
 }
+
 
 def cropped_loss(loss_fn):
     """ Wraps loss function. Crops the labels to match the logits size. """
@@ -33,6 +31,7 @@ def cropped_loss(loss_fn):
         return loss_fn(labels_crop, logits)
 
     return _loss_fn
+
 
 class CroppedMetric(tf.keras.metrics.Metric):
     """ Wraps a metric. Crops the labels to match the logits size. """
@@ -55,6 +54,7 @@ class CroppedMetric(tf.keras.metrics.Metric):
 
     def get_config(self):
         return self.metric.get_config()
+
 
 class BaseSegmentationModel(BaseModel):
     """ Base for segmentation models. """
@@ -85,7 +85,6 @@ class BaseSegmentationModel(BaseModel):
             metrics = self.config.metrics
 
         # Wrap loss function
-        loss = self.config.loss
         if loss in segmentation_losses:
             loss = segmentation_losses[loss]
         wrapped_loss = cropped_loss(loss)

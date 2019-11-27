@@ -7,9 +7,11 @@ from .base import BaseModel, BaseTask
 from .base.configuration import ObjectConfiguration, Config
 from .utils import parse_classname
 
+
 class ExecutionConfig(Schema):
     model = fields.Nested(ObjectConfiguration, required=True, description='Model configuration')
     task = fields.Nested(ObjectConfiguration, required=True, description='Task configuration')
+
 
 def execute(config_file):
     """Executes a workflow defined in a config file."""

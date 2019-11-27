@@ -1,13 +1,9 @@
 import logging
 import tensorflow as tf
-from tensorflow.keras import layers
-from marshmallow import Schema, fields
-from marshmallow.validate import OneOf
+from marshmallow import fields
 
-from ..base import BaseModel
 from .layers import Conv2D, Deconv2D, CropAndConcat, Conv3D, MaxPool3D, Reduce3DTo2D
 from .segmentation import BaseSegmentationModel
-from tensorflow.python.keras.engine import training_utils
 
 
 logging.basicConfig(level=logging.INFO,
@@ -43,7 +39,7 @@ class TFCNModel(BaseSegmentationModel):
 
     def build(self, inputs_shape):
 
-        x = layers.Input(inputs_shape[1:])
+        x = tf.keras.layers.Input(inputs_shape[1:])
         dropout_rate = 1 - self.config.keep_prob
 
         num_repetitions = 1 if self.config.single_encoding_conv else 2
@@ -129,7 +125,7 @@ class TFCNModel(BaseSegmentationModel):
                 num_repetitions=2)(cc)
 
         # final 1x1 convolution corresponding to pixel-wise linear combination of feature channels
-        logits = layers.Conv2D(
+        logits = tf.keras.layers.Conv2D(
                 filters=self.config.n_classes,
                 kernel_size=1)(net)
 

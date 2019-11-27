@@ -8,15 +8,18 @@ import tensorflow as tf
 from . import Configurable
 from ..utils import create_dirs, get_common_shape
 
+
 class BaseModel(tf.keras.Model, Configurable):
     def __init__(self, config_specs):
         tf.keras.Model.__init__(self)
         Configurable.__init__(self, config_specs)
 
+        self.net = None
+
         self.init_model()
 
     def init_model(self):
-        """ Called on __init__. Keras model initialization. If model does not require the inputs shape, create it here. """
+        """ Called on __init__. Keras model initialization. Create model here if does not require the inputs shape """
         pass
 
     def build(self, inputs_shape):
