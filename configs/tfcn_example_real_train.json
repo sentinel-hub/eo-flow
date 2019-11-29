@@ -28,11 +28,12 @@
         "classname": "eoflow.tasks.TrainTask",
         "config": {
             "num_epochs": 50,
+            "iterations_per_epoch": 10,
             "model_directory": "./temp/tfcn_svn_lulc",
             "input_config":{
                 "classname": "examples.input.EOPatchInputExample",
                 "config": {
-                    "data_dir": "/storage/jupyter/data/svn_lulc/data/train-val-linear-v01-aws/train",
+                    "data_dir": "/home/devis/Desktop/train-val-linear-v01-aws/train",
                     "input_feature_type": "data",
                     "input_feature_name": "FEATURES",
                     "input_feature_axis": [1,2],
@@ -43,7 +44,7 @@
                     "labels_feature_shape": [-1, -1, 1],
                     "patch_size": [128, 128],
                     "interleave_size": 3,
-                    "batch_size": 5,
+                    "batch_size": 2,
                     "num_classes": 10,
                     "cache_file": "./temp/tfcn_svn_lulc/dataset/cache",
                     "num_subpatches": 5,
