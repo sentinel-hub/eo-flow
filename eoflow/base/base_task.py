@@ -1,13 +1,15 @@
 from . import Configurable, BaseInput
 from ..utils import parse_classname
 
+
 class BaseTask(Configurable):
     def __init__(self, model, config_specs):
         super().__init__(config_specs)
 
         self.model = model
 
-    def parse_input(self, input_config):
+    @staticmethod
+    def parse_input(input_config):
         """ Builds the input dataset using the provided configuration. """
 
         classname, config = input_config.classname, input_config.config

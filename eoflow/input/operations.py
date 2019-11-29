@@ -5,7 +5,8 @@ import tensorflow as tf
 from ..utils import create_dirs
 
 
-def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=False, num_random_samples=20, grid_overlap=0.2):
+def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=False, num_random_samples=20,
+                       grid_overlap=0.2):
     """ Builds a TF op for building a dataset of subpatches from tensors. Subpatches sampling can be random or grid based.
 
     :param patch_size: Width and height of extracted patches
@@ -21,11 +22,13 @@ def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=Fa
     :type grid_overlap: float
     """
 
-    patch_w,patch_h = patch_size
+    patch_w, patch_h = patch_size
+
     def _fn(data):
         feat_name_ref, axis_ref = spatial_features_and_axis[0]
         ay_ref, ax_ref = axis_ref
         # Get random coordinates
+
         def _py_get_random(image):
             x_space = image.shape[ax_ref]-patch_w
             if x_space > 0:
@@ -94,10 +97,10 @@ def extract_subpatches(patch_size, spatial_features_and_axis, random_sampling=Fa
         else:
             x_samp, y_samp = tf.py_function(_py_get_gridded, [data[feat_name_ref]], [tf.int64, tf.int64])
 
-
         def _py_get_patches(axis):
             ay, ax = axis
             # Extract patches for given coordinates
+
             def _func(image, x_samp, y_samp):
                 patches = []
 

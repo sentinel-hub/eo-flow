@@ -6,7 +6,6 @@ from marshmallow.validate import OneOf
 from eolearn.core import EOPatch, FeatureType
 
 from ..base import BaseInput
-from .operations import extract_subpatches, augment_data, cache_dataset
 
 _valid_types = [t.value for t in FeatureType]
 
@@ -14,8 +13,8 @@ _valid_types = [t.value for t in FeatureType]
 def eopatch_dataset(root_dir_or_list, features_data, fill_na=None):
     """ Creates a tf dataset with features from saved EOPatches.
 
-    :param data_dir_or_list: Root directory containing eopatches or a list of eopatch directories.
-    :type data_dir_or_list: str or list(str)
+    :param root_dir_or_list: Root directory containing eopatches or a list of eopatch directories.
+    :type root_dir_or_list: str or list(str)
     :param features_data: List of tuples containing data about features to extract.
         Tuple structure: (feature_type, feature_name, out_feature_name, feature_dtype, feature_shape)
     :type features_data: (str, str, str, np.dtype, tuple)

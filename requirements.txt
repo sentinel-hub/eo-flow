@@ -1,9 +1,6 @@
 eo-learn-core
-eo-learn-io
 munch
 tensorflow>=2.0
-marshmallow
 numpy
-tqdm
-scipy
-scikit-image
+marshmallow
+matplotlib

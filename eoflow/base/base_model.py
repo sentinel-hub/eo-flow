@@ -1,12 +1,8 @@
-import logging
 import os
-from enum import Enum
 
-from tqdm.auto import tqdm
 import tensorflow as tf
 
 from . import Configurable
-from ..utils import create_dirs, get_common_shape
 
 
 class BaseModel(tf.keras.Model, Configurable):
@@ -49,8 +45,10 @@ class BaseModel(tf.keras.Model, Configurable):
               dataset,
               num_epochs,
               model_directory,
+              iterations_per_epoch,
               save_steps='epoch',
               summary_steps=1,
+              callbacks=[],
               **kwargs):
         """ Trains the model on a given dataset. Takes care of saving the model and recording summaries.
 
@@ -62,9 +60,12 @@ class BaseModel(tf.keras.Model, Configurable):
         :type num_epochs: int
         :param model_directory: Output directory, where the model checkpoints and summaries are saved.
         :type model_directory: str
+        :param iterations_per_epoch: Number of training steps to make every epoch.
+            Training dataset is repeated automatically when the end is reached.
+        :type iterations_per_epoch: int
         :param save_steps: Number of steps between saving model checkpoints.
         :type save_steps: int
-        :param summary_steps: Number of steps between recodring summaries.
+        :param summary_steps: Number of steps between recording summaries.
         :type summary_steps: int
 
         Other keyword parameters are passed to the Model.fit method.
@@ -81,13 +82,20 @@ class BaseModel(tf.keras.Model, Configurable):
                                                                  save_freq=save_steps,
                                                                  save_weights_only=True)
 
-        return self.fit(dataset,
+        return self.fit(dataset.repeat(),
                         epochs=num_epochs,
-                        callbacks=[tensorboard_callback, checkpoint_callback],
+                        steps_per_epoch=iterations_per_epoch,
+                        callbacks=[tensorboard_callback, checkpoint_callback] + callbacks,
                         **kwargs)
 
-    def train_and_evaluate(self, train_dataset, val_dataset, num_epochs, iterations_per_epoch, model_directory,
-                           save_steps=100, summary_steps=10, **kwargs):
+    def train_and_evaluate(self,
+                           train_dataset,
+                           val_dataset,
+                           num_epochs,
+                           iterations_per_epoch,
+                           model_directory,
+                           validation_steps=None,
+                           save_steps=100, summary_steps=10, callbacks=[], **kwargs):
         """ Trains the model on a given dataset. At the end of each epoch an evaluation is performed on the provided
             validation dataset. Takes care of saving the model and recording summaries.
 
@@ -95,8 +103,8 @@ class BaseModel(tf.keras.Model, Configurable):
             The dataset must be of shape (features, labels) where features and labels contain the data
             in the shape required by the model.
         :type train_dataset: tf.data.Dataset
-        :param val_dataset_fn: Same as for `train_dataset`, but for the validation data.
-        :type val_dataset_fn: tf.data.Dataset
+        :param val_dataset: Same as for `train_dataset`, but for the validation data.
+        :type val_dataset: tf.data.Dataset
         :param num_epochs: Number of epochs. Epoch size is independent from the dataset size.
         :type num_epochs: int
         :param iterations_per_epoch: Number of training steps to make every epoch.
@@ -104,6 +112,9 @@ class BaseModel(tf.keras.Model, Configurable):
         :type iterations_per_epoch: int
         :param model_directory: Output directory, where the model checkpoints and summaries are saved.
         :type model_directory: str
+        :param validation_steps: Relevant if validation_data is provided and is a tf.data dataset. Total number of
+            steps to draw before stopping when performing validation at the end of every epoch.
+        :type validation_steps: int or None
         :param save_steps: Number of steps between saving model checkpoints.
         :type save_steps: int
         :param summary_steps: Number of steps between recodring summaries.
@@ -123,12 +134,10 @@ class BaseModel(tf.keras.Model, Configurable):
                                                                  save_freq=save_steps,
                                                                  save_weights_only=True)
 
-        # Repeat training dataset indefenetly
-        train_dataset = train_dataset.repeat()
-
-        return self.fit(train_dataset,
-                        validation_data=val_dataset,
+        return self.fit(train_dataset.repeat(),
+                        validation_data=val_dataset.repeat(),
                         epochs=num_epochs,
+                        validation_steps=validation_steps,
                         steps_per_epoch=iterations_per_epoch,
-                        callbacks=[tensorboard_callback, checkpoint_callback],
+                        callbacks=[tensorboard_callback, checkpoint_callback] + callbacks,
                         **kwargs)

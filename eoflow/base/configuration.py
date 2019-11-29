@@ -1,8 +1,10 @@
 from abc import ABC
 import inspect
+import json
+
 from marshmallow import Schema, fields
 from munch import Munch
-import json
+
 
 def dict_to_munch(obj):
     """ Recursively convert a dict to Munch. (there is a Munch.from_dict method, but it's not python3 compatible)
