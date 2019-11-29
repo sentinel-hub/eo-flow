@@ -2,6 +2,7 @@ import tensorflow as tf
 import io
 import matplotlib.pyplot as plt
 
+
 def plot_to_image(figure):
     """ Converts the matplotlib plot specified by 'figure' to a PNG image and
     returns it. The supplied figure is closed and inaccessible after this call. """

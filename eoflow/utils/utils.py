@@ -1,8 +1,10 @@
 import os
 from pydoc import locate
 
+
 def parse_classname(classname):
     return locate(classname)
+
 
 def create_dirs(dirs):
     """
@@ -18,6 +20,7 @@ def create_dirs(dirs):
     except Exception as err:
         print("Creating directories error: {0}".format(err))
         exit(-1)
+
 
 def get_common_shape(shape1, shape2):
     """ Get a common shape that fits both shapes. Dimensions that differ in size are set to None.

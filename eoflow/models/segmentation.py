@@ -1,7 +1,7 @@
 import os
 import logging
+
 import tensorflow as tf
-from tensorflow.keras import layers
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -66,10 +66,11 @@ class CroppedMetric(tf.keras.metrics.Metric):
     def get_config(self):
         return self.metric.get_config()
 
+
 class VisualizationCallback(tf.keras.callbacks.Callback):
     """ Keras Callback for saving prediction visualizations to TensorBoard. """
 
-    def __init__(self, val_images, log_dir, time_index=0, rgb_indices=[0,1,2]):
+    def __init__(self, val_images, log_dir, time_index=0, rgb_indices=[2, 1, 0]):
         """
         :param val_images: Images to run predictions on. Tuple of (images, labels).
         :type val_images: (np.array, np.array)
@@ -88,9 +89,10 @@ class VisualizationCallback(tf.keras.callbacks.Callback):
 
         self.file_writer = tf.summary.create_file_writer(log_dir)
 
-    def plot_predictions(self, input_image, labels, predictions, n_classes):
+    @staticmethod
+    def plot_predictions(input_image, labels, predictions, n_classes):
         # TODO: fix figsize (too wide?)
-        fig,(ax1,ax2,ax3) = plt.subplots(1, 3, figsize=(18, 5))
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
 
         scaled_image = np.clip(input_image*2.5, 0., 1.)
         ax1.imshow(scaled_image)
@@ -105,7 +107,7 @@ class VisualizationCallback(tf.keras.callbacks.Callback):
         img = ax3.imshow(predictions, cmap=cmap, norm=cnorm)
         ax3.title.set_text('Predicted classes')
 
-        plt.colorbar(img, ax=[ax1,ax2,ax3], shrink=0.8, ticks=list(range(n_classes)))
+        plt.colorbar(img, ax=[ax1, ax2, ax3], shrink=0.8, ticks=list(range(n_classes)))
 
         return fig
 
@@ -124,7 +126,7 @@ class VisualizationCallback(tf.keras.callbacks.Callback):
         images = tf.image.resize_with_crop_or_pad(images, pred_shape[1], pred_shape[2])
 
         # Take RGB values
-        images = images.numpy()[...,self.rgb_indices]
+        images = images.numpy()[..., self.rgb_indices]
 
         num_classes = labels.shape[-1]
 
@@ -204,7 +206,6 @@ class BaseSegmentationModel(BaseModel):
 
         self.compile(optimizer=optimizer, loss=wrapped_loss, metrics=wrapped_metrics, **kwargs)
 
-
     def _get_visualization_callback(self, dataset, log_dir):
         ds = dataset.unbatch().batch(self.config.prediction_visualization_num).take(1)
         data = next(iter(ds))
@@ -213,8 +214,13 @@ class BaseSegmentationModel(BaseModel):
         return visualization_callback
 
     # Override default method to add prediction visualization
-    def train(self, dataset, num_epochs, model_directory, callbacks=[],
-              save_steps='epoch', summary_steps=1, **kwargs):
+    def train(self, dataset,
+              num_epochs,
+              model_directory,
+              iterations_per_epoch,
+              callbacks=[],
+              save_steps='epoch',
+              summary_steps=1, **kwargs):
 
         custom_callbacks = []
 
@@ -223,12 +229,20 @@ class BaseSegmentationModel(BaseModel):
             visualization_callback = self._get_visualization_callback(dataset, log_dir)
             custom_callbacks.append(visualization_callback)
 
-        super().train(dataset, num_epochs, model_directory, callbacks=callbacks + custom_callbacks,
-                      save_steps=save_steps, summary_steps=summary_steps, **kwargs)
+        super().train(dataset, num_epochs, model_directory, iterations_per_epoch,
+                      callbacks=callbacks + custom_callbacks, save_steps=save_steps,
+                      summary_steps=summary_steps, **kwargs)
 
     # Override default method to add prediction visualization
-    def train_and_evaluate(self, train_dataset, val_dataset, num_epochs, iterations_per_epoch, model_directory,
-                           save_steps=100, summary_steps=10, callbacks=[], **kwargs):
+    def train_and_evaluate(self,
+                           train_dataset,
+                           val_dataset,
+                           num_epochs,
+                           iterations_per_epoch,
+                           model_directory,
+                           save_steps=100,
+                           summary_steps=10,
+                           callbacks=[], **kwargs):
 
         custom_callbacks = []
 
@@ -237,5 +251,9 @@ class BaseSegmentationModel(BaseModel):
             visualization_callback = self._get_visualization_callback(val_dataset, log_dir)
             custom_callbacks.append(visualization_callback)
 
-        super().train_and_evaluate(train_dataset, val_dataset, num_epochs, iterations_per_epoch, model_directory,
-                                   save_steps=save_steps, summary_steps=summary_steps, callbacks=callbacks + custom_callbacks, **kwargs)
+        super().train_and_evaluate(train_dataset, val_dataset,
+                                   num_epochs, iterations_per_epoch,
+                                   model_directory,
+                                   save_steps=save_steps, summary_steps=summary_steps,
+                                   validation_steps=summary_steps,
+                                   callbacks=callbacks + custom_callbacks, **kwargs)
