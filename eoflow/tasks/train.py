@@ -39,7 +39,7 @@ class TrainAndEvaluateTask(BaseTask):
         train_input_config = fields.Nested(nested=ObjectConfiguration, required=True, description="Input type and configuration for training.")
         val_input_config = fields.Nested(nested=ObjectConfiguration, required=True, description="Input type and configuration for validation.")
 
-        validation_steps = fields.Int(missing=None, description="Number of batches to compute validation scores over")
+        validation_steps = fields.Int(missing=1, description="Number of batches to compute validation scores over")
         save_steps = fields.Int(missing=100, description="Number of training steps between model checkpoints.")
         summary_steps = fields.Int(missing=10, description="Number of training steps between recording summaries.")
 
@@ -48,8 +48,6 @@ class TrainAndEvaluateTask(BaseTask):
         val_dataset = self.parse_input(self.config.val_input_config)
 
         self.model.prepare()
-
-        self.model.summary()
 
         self.model.train_and_evaluate(
             train_dataset, val_dataset,

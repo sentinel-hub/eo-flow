@@ -66,7 +66,7 @@ class EOPatchInputExample(BaseInput):
 
     @staticmethod
     def _parse_shape(shape):
-        shape = [None if s<0 else s for s in shape]
+        shape = [None if s < 0 else s for s in shape]
         return shape
 
     def get_dataset(self):
