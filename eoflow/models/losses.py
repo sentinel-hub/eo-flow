@@ -50,3 +50,45 @@ class CategoricalFocalLoss(Loss):
         loss = tf.reduce_sum(loss, axis=-1)
 
         return loss
+
+
+class JaccardDistanceLoss(Loss):
+    """ Implementation of the Jaccard distance, or Intersection over Union IoU loss.
+
+    Jaccard = (|X & Y|)/ (|X|+ |Y| - |X & Y|)
+            = sum(|A*B|)/(sum(|A|)+sum(|B|)-sum(|A*B|))
+
+    Implementation taken from https://github.com/keras-team/keras-contrib/blob/master/keras_contrib/losses/jaccard.py
+    """
+    def __init__(self, smooth=1, from_logits=True, reduction=Reduction.AUTO, name='JaccardLoss'):
+        """ Jaccard distance loss.
+
+        :param smooth: Smoothing factor. Default is 1.
+        :type smooth: int
+        :param from_logits: Whether predictions are logits or softmax, defaults to True
+        :type from_logits: bool
+        :param reduction: reduction to be used, defaults to Reduction.AUTO
+        :type reduction: tf.keras.losses.Reduction, optional
+        :param name: name of the loss, defaults to 'JaccardLoss'
+        :type name: str
+        """
+        super().__init__(reduction=reduction, name=name)
+
+        self.smooth = smooth
+        self.from_logits = from_logits
+
+    def call(self, y_true, y_pred):
+
+        # Perform softmax
+        if self.from_logits:
+            y_pred = tf.nn.softmax(y_pred)
+
+        intersection = tf.reduce_sum(y_true * y_pred, axis=(1, 2))
+
+        sum_ = tf.reduce_sum(y_true + y_pred, axis=(1, 2))
+
+        jac = (intersection + self.smooth) / (sum_ - intersection + self.smooth)
+
+        loss = tf.reduce_mean((1 - jac) * self.smooth)
+
+        return loss
