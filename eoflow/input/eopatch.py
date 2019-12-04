@@ -87,7 +87,7 @@ class EOPatchSegmentationInput(BaseInput):
         num_classes = fields.Int(description="Number of classes. Used for one-hot encoding.", required=True, example=2)
 
     def _parse_shape(self, shape):
-        shape = [None if s<0 else s for s in shape]
+        shape = [None if s < 0 else s for s in shape]
         return shape
 
     def get_dataset(self):

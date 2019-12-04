@@ -94,7 +94,6 @@ class BaseModel(tf.keras.Model, Configurable):
                            num_epochs,
                            iterations_per_epoch,
                            model_directory,
-                           validation_steps=None,
                            save_steps=100, summary_steps=10, callbacks=[], **kwargs):
         """ Trains the model on a given dataset. At the end of each epoch an evaluation is performed on the provided
             validation dataset. Takes care of saving the model and recording summaries.
@@ -112,9 +111,6 @@ class BaseModel(tf.keras.Model, Configurable):
         :type iterations_per_epoch: int
         :param model_directory: Output directory, where the model checkpoints and summaries are saved.
         :type model_directory: str
-        :param validation_steps: Relevant if validation_data is provided and is a tf.data dataset. Total number of
-            steps to draw before stopping when performing validation at the end of every epoch.
-        :type validation_steps: int or None
         :param save_steps: Number of steps between saving model checkpoints.
         :type save_steps: int
         :param summary_steps: Number of steps between recodring summaries.
@@ -135,9 +131,8 @@ class BaseModel(tf.keras.Model, Configurable):
                                                                  save_weights_only=True)
 
         return self.fit(train_dataset.repeat(),
-                        validation_data=val_dataset.repeat(),
+                        validation_data=val_dataset,
                         epochs=num_epochs,
-                        validation_steps=validation_steps,
                         steps_per_epoch=iterations_per_epoch,
                         callbacks=[tensorboard_callback, checkpoint_callback] + callbacks,
                         **kwargs)

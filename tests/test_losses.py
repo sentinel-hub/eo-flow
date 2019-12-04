@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from eoflow.models.losses import CategoricalFocalLoss
+from eoflow.models.losses import CategoricalFocalLoss, JaccardDistanceLoss
 
 
 class TestFocalLoss(unittest.TestCase):
@@ -44,6 +44,32 @@ class TestFocalLoss(unittest.TestCase):
 
         self.assertGreater(val3, val2)
         self.assertGreater(val1, val3)
+
+    def test_jaccard_loss(self):
+        loss_fn = JaccardDistanceLoss(from_logits=False, smooth=1)
+
+        y_true = np.zeros([1, 32, 32, 3])
+        y_true[:, :16, :16, 0] = np.ones((1, 16, 16))
+        y_true[:, 16:, :16, 1] = np.ones((1, 16, 16))
+        y_true[:, :, 16:, 2] = np.ones((1, 32, 16))
+
+        y_pred = np.zeros([1, 32, 32, 3])
+        y_pred[..., 0] = 1
+
+        val_1 = loss_fn(y_true, y_true).numpy()
+        val_2 = loss_fn(y_true, y_pred).numpy()
+        y_pred[..., 0] = 0
+        y_pred[..., 1] = 1
+        val_3 = loss_fn(y_true, y_pred).numpy()
+        y_pred[..., 1] = 0
+        y_pred[..., 2] = 1
+        val_4 = loss_fn(y_true, y_pred).numpy()
+
+        self.assertEqual(val_1, 0.0)
+        self.assertAlmostEqual(val_2, 0.914476, 5)
+        self.assertAlmostEqual(val_3, 0.914476, 5)
+        self.assertAlmostEqual(val_4, 0.830577, 5)
+
 
 if __name__ == '__main__':
     unittest.main()

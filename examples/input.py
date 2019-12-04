@@ -66,7 +66,7 @@ class EOPatchInputExample(BaseInput):
 
     @staticmethod
     def _parse_shape(shape):
-        shape = [None if s<0 else s for s in shape]
+        shape = [None if s < 0 else s for s in shape]
         return shape
 
     def get_dataset(self):
@@ -106,7 +106,7 @@ class EOPatchInputExample(BaseInput):
         # One-hot encode labels and return tuple
         def _prepare_data(data):
             features = data['features']
-            labels = data['labels'][...,0]
+            labels = data['labels'][..., 0]
 
             labels_oh = tf.one_hot(labels, depth=self.config.num_classes)
 
@@ -115,6 +115,6 @@ class EOPatchInputExample(BaseInput):
         dataset = dataset.map(_prepare_data)
 
         # Create batches
-        dataset = dataset.batch(self.config.batch_size).repeat()
+        dataset = dataset.batch(self.config.batch_size)
 
         return dataset

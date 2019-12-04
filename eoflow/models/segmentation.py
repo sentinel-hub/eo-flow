@@ -11,7 +11,7 @@ from marshmallow.validate import OneOf, ContainsOnly
 from ..base import BaseModel
 from ..utils.tf_utils import plot_to_image
 
-from .losses import CategoricalFocalLoss
+from .losses import CategoricalFocalLoss, JaccardDistanceLoss
 from .metrics import MeanIoU, InitializableMetric
 
 logging.basicConfig(level=logging.INFO,
@@ -21,7 +21,8 @@ logging.basicConfig(level=logging.INFO,
 # Available losses. Add keys with new losses here.
 segmentation_losses = {
     'cross_entropy': tf.keras.losses.CategoricalCrossentropy(from_logits=True),
-    'focal_loss': CategoricalFocalLoss(from_logits=True)
+    'focal_loss': CategoricalFocalLoss(from_logits=True),
+    'jaccard_loss': JaccardDistanceLoss(from_logits=True)
 }
 
 
@@ -255,5 +256,4 @@ class BaseSegmentationModel(BaseModel):
                                    num_epochs, iterations_per_epoch,
                                    model_directory,
                                    save_steps=save_steps, summary_steps=summary_steps,
-                                   validation_steps=summary_steps,
                                    callbacks=callbacks + custom_callbacks, **kwargs)
