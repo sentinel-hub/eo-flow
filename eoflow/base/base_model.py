@@ -131,7 +131,7 @@ class BaseModel(tf.keras.Model, Configurable):
                                                                  save_weights_only=True)
 
         return self.fit(train_dataset.repeat(),
-                        validation_data=val_dataset.repeat(),
+                        validation_data=val_dataset,
                         epochs=num_epochs,
                         steps_per_epoch=iterations_per_epoch,
                         callbacks=[tensorboard_callback, checkpoint_callback] + callbacks,
