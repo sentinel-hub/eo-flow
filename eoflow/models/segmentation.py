@@ -134,7 +134,6 @@ class BaseSegmentationModel(BaseModel):
                            iterations_per_epoch,
                            model_directory,
                            class_weights=None,
-                           validation_steps=1,
                            save_steps=100,
                            summary_steps=10,
                            callbacks=[], **kwargs):
@@ -150,5 +149,4 @@ class BaseSegmentationModel(BaseModel):
                                    num_epochs, iterations_per_epoch,
                                    model_directory,
                                    save_steps=save_steps, summary_steps=summary_steps,
-                                   validation_steps=validation_steps,
                                    callbacks=callbacks + custom_callbacks, **kwargs)

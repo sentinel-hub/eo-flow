@@ -39,7 +39,6 @@ class TrainAndEvaluateTask(BaseTask):
         train_input_config = fields.Nested(nested=ObjectConfiguration, required=True, description="Input type and configuration for training.")
         val_input_config = fields.Nested(nested=ObjectConfiguration, required=True, description="Input type and configuration for validation.")
 
-        validation_steps = fields.Int(missing=1, description="Number of batches to compute validation scores over")
         save_steps = fields.Int(missing=100, description="Number of training steps between model checkpoints.")
         summary_steps = fields.Int(missing=10, description="Number of training steps between recording summaries.")
 
@@ -53,7 +52,6 @@ class TrainAndEvaluateTask(BaseTask):
             train_dataset, val_dataset,
             num_epochs=self.config.num_epochs,
             iterations_per_epoch=self.config.iterations_per_epoch,
-            validation_steps=self.config.validation_steps,
             model_directory=self.config.model_directory,
             save_steps=self.config.save_steps,
             summary_steps=self.config.summary_steps
