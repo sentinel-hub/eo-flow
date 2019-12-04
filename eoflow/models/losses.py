@@ -21,6 +21,8 @@ class CategoricalCrossEntropy(Loss):
 
         :param from_logits: Whether predictions are logits or softmax, defaults to True
         :type from_logits: bool
+        :param class_weights: Array of class weights to be applied to loss. Needs to be of `n_classes` length
+        :type class_weights: np.array
         :param reduction: reduction to be used, defaults to Reduction.AUTO
         :type reduction: tf.keras.losses.Reduction, optional
         :param name: name of the loss, defaults to 'FocalLoss'
@@ -71,6 +73,8 @@ class CategoricalFocalLoss(Loss):
         :type alpha: float
         :param from_logits: Whether predictions are logits or softmax, defaults to True
         :type from_logits: bool
+        :param class_weights: Array of class weights to be applied to loss. Needs to be of `n_classes` length
+        :type class_weights: np.array
         :param reduction: reduction to be used, defaults to Reduction.AUTO
         :type reduction: tf.keras.losses.Reduction, optional
         :param name: name of the loss, defaults to 'FocalLoss'
@@ -124,6 +128,8 @@ class JaccardDistanceLoss(Loss):
         :type smooth: int
         :param from_logits: Whether predictions are logits or softmax, defaults to True
         :type from_logits: bool
+        :param class_weights: Array of class weights to be applied to loss. Needs to be of `n_classes` length
+        :type class_weights: np.array
         :param reduction: reduction to be used, defaults to Reduction.AUTO
         :type reduction: tf.keras.losses.Reduction, optional
         :param name: name of the loss, defaults to 'JaccardLoss'
