@@ -41,13 +41,43 @@ class BaseModel(tf.keras.Model, Configurable):
 
         return self.load_weights(checkpoints_path).expect_partial()
 
+    def _fit(self,
+             dataset,
+             num_epochs,
+             model_directory,
+             iterations_per_epoch,
+             val_dataset=None,
+             save_steps=100,
+             summary_steps='epoch',
+             callbacks=[],
+             **kwargs):
+        """ Trains and evaluates the model on a given dataset, saving the model and recording summaries. """
+        logs_path = os.path.join(model_directory, 'logs')
+        checkpoints_path = os.path.join(model_directory, 'checkpoints', 'model.ckpt')
+
+        # Tensorboard callback
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logs_path,
+                                                              update_freq=summary_steps,
+                                                              profile_batch=0)
+
+        # Checkpoint saving callback
+        checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(checkpoints_path,
+                                                                 save_freq=save_steps,
+                                                                 save_weights_only=True)
+        return self.fit(dataset,
+                        validation_data=val_dataset,
+                        epochs=num_epochs,
+                        steps_per_epoch=iterations_per_epoch,
+                        callbacks=[tensorboard_callback, checkpoint_callback] + callbacks,
+                        **kwargs)
+
     def train(self,
               dataset,
               num_epochs,
               model_directory,
               iterations_per_epoch,
-              save_steps='epoch',
-              summary_steps=1,
+              save_steps=100,
+              summary_steps='epoch',
               callbacks=[],
               **kwargs):
         """ Trains the model on a given dataset. Takes care of saving the model and recording summaries.
@@ -66,27 +96,21 @@ class BaseModel(tf.keras.Model, Configurable):
         :param save_steps: Number of steps between saving model checkpoints.
         :type save_steps: int
         :param summary_steps: Number of steps between recording summaries.
-        :type summary_steps: int
+        :type summary_steps: str or int
+        :param callbacks: Customised Keras callbacks to use during training/evaluation
+        :type callbacks: tf.keras.callbacks
 
         Other keyword parameters are passed to the Model.fit method.
         """
 
-        logs_path = os.path.join(model_directory, 'logs')
-        checkpoints_path = os.path.join(model_directory, 'checkpoints', 'model.ckpt')
-
-        # Tensorboard callback
-        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logs_path, update_freq=summary_steps)
-
-        # Checkpoint saving callback
-        checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(checkpoints_path,
-                                                                 save_freq=save_steps,
-                                                                 save_weights_only=True)
-
-        return self.fit(dataset.repeat(),
-                        epochs=num_epochs,
-                        steps_per_epoch=iterations_per_epoch,
-                        callbacks=[tensorboard_callback, checkpoint_callback] + callbacks,
-                        **kwargs)
+        return self._fit(dataset.repeat(),
+                         num_epochs=num_epochs,
+                         model_directory=model_directory,
+                         iterations_per_epoch=iterations_per_epoch,
+                         save_steps=save_steps,
+                         summary_steps=summary_steps,
+                         callbacks=callbacks,
+                         **kwargs)
 
     def train_and_evaluate(self,
                            train_dataset,
@@ -94,7 +118,7 @@ class BaseModel(tf.keras.Model, Configurable):
                            num_epochs,
                            iterations_per_epoch,
                            model_directory,
-                           save_steps=100, summary_steps=10, callbacks=[], **kwargs):
+                           save_steps=100, summary_steps='epoch', callbacks=[], **kwargs):
         """ Trains the model on a given dataset. At the end of each epoch an evaluation is performed on the provided
             validation dataset. Takes care of saving the model and recording summaries.
 
@@ -114,25 +138,18 @@ class BaseModel(tf.keras.Model, Configurable):
         :param save_steps: Number of steps between saving model checkpoints.
         :type save_steps: int
         :param summary_steps: Number of steps between recodring summaries.
-        :type summary_steps: int
+        :type summary_steps: str or int
+        :param callbacks: Customised Keras callbacks to use during training/evaluation
+        :type callbacks: tf.keras.callbacks
 
         Other keyword parameters are passed to the Model.fit method.
         """
-
-        logs_path = os.path.join(model_directory, 'logs')
-        checkpoints_path = os.path.join(model_directory, 'checkpoints', 'model.ckpt')
-
-        # Tensorboard callback
-        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logs_path, update_freq=summary_steps)
-
-        # Checkpoint saving callback
-        checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(checkpoints_path,
-                                                                 save_freq=save_steps,
-                                                                 save_weights_only=True)
-
-        return self.fit(train_dataset.repeat(),
-                        validation_data=val_dataset,
-                        epochs=num_epochs,
-                        steps_per_epoch=iterations_per_epoch,
-                        callbacks=[tensorboard_callback, checkpoint_callback] + callbacks,
-                        **kwargs)
+        return self._fit(train_dataset.repeat(),
+                         num_epochs,
+                         model_directory,
+                         iterations_per_epoch,
+                         val_dataset=val_dataset,
+                         save_steps=save_steps,
+                         summary_steps=summary_steps,
+                         callbacks=callbacks,
+                         **kwargs)

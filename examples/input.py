@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import tensorflow as tf
 from marshmallow import fields, Schema
@@ -71,7 +73,7 @@ class EOPatchInputExample(BaseInput):
 
     def get_dataset(self):
         cfg = self.config
-        print(cfg)
+        print(json.dumps(cfg, indent=4))
 
         # Create a tf.data.Dataset from EOPatches
         features_data = [

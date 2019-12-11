@@ -13,7 +13,7 @@ class TrainTask(BaseTask):
         input_config = fields.Nested(nested=ObjectConfiguration, required=True, description="Input type and configuration.")
 
         save_steps = fields.Int(missing=100, description="Number of training steps between model checkpoints.")
-        summary_steps = fields.Int(missing=10, description="Number of training steps between recording summaries.")
+        summary_steps = fields.Int(missing='epoch', description="Number of training steps between recording summaries.")
 
     def run(self):
         dataset = self.parse_input(self.config.input_config)
@@ -40,7 +40,7 @@ class TrainAndEvaluateTask(BaseTask):
         val_input_config = fields.Nested(nested=ObjectConfiguration, required=True, description="Input type and configuration for validation.")
 
         save_steps = fields.Int(missing=100, description="Number of training steps between model checkpoints.")
-        summary_steps = fields.Int(missing=10, description="Number of training steps between recording summaries.")
+        summary_steps = fields.Int(missing='epoch', description="Number of training steps between recording summaries.")
 
     def run(self):
         train_dataset = self.parse_input(self.config.train_input_config)

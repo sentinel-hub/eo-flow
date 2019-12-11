@@ -13,7 +13,7 @@
             "add_dropout": true,
             "add_batch_norm": false,
             "bias_init": 0.0,
-            "padding": "VALID",
+            "padding": "SAME",
             "pool_size": 2,
             "pool_stride": 2,
             "pool_time": false,
@@ -71,8 +71,8 @@
                     "num_subpatches": 5
                 }
             },
-            "save_steps": 100,
-            "summary_steps": 10
+            "save_steps": 10,
+            "summary_steps": 1
         }
     }
   }
