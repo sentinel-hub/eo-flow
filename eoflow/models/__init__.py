@@ -1,1 +1,1 @@
-from .unets import FCNModel, TFCNModel
+from .segmentation_unets import FCNModel, TFCNModel

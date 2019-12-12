@@ -3,7 +3,7 @@ import tensorflow as tf
 from marshmallow import fields
 
 from .layers import Conv2D, Deconv2D, CropAndConcat, Conv3D, MaxPool3D, Reduce3DTo2D
-from .segmentation import BaseSegmentationModel
+from .segmentation_base import BaseSegmentationModel
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
