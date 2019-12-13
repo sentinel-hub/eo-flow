@@ -75,7 +75,7 @@ class BaseModel(tf.keras.Model, Configurable):
               dataset,
               num_epochs,
               model_directory,
-              iterations_per_epoch,
+              iterations_per_epoch=None,
               save_steps=100,
               summary_steps='epoch',
               callbacks=[],
@@ -103,7 +103,7 @@ class BaseModel(tf.keras.Model, Configurable):
         Other keyword parameters are passed to the Model.fit method.
         """
 
-        return self._fit(dataset.repeat(),
+        return self._fit(dataset if iterations_per_epoch is None else dataset.repeat(),
                          num_epochs=num_epochs,
                          model_directory=model_directory,
                          iterations_per_epoch=iterations_per_epoch,

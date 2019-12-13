@@ -86,10 +86,11 @@ class BaseClassificationModel(BaseModel):
         self.compile(optimizer=optimizer, loss=loss, metrics=reported_metrics, **kwargs)
 
     # Override default method to add prediction visualization
-    def train(self, dataset,
+    def train(self,
+              dataset,
               num_epochs,
               model_directory,
-              iterations_per_epoch,
+              iterations_per_epoch=None,
               class_weights=None,
               callbacks=[],
               save_steps='epoch',
