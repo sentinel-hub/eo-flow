@@ -15,7 +15,6 @@ from .callbacks import VisualizationCallback
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
 
-
 # Available losses. Add keys with new losses here.
 segmentation_losses = {
     'cross_entropy': CategoricalCrossEntropy,
@@ -92,12 +91,11 @@ class BaseSegmentationModel(BaseModel):
             if isinstance(metric, InitializableMetric):
                 metric.init_from_config(self.config)
 
-            wrapped_metric = CroppedMetric(metric)
+            wrapped_metric = CroppedMetric(metric, ignore_no_data=True)
             wrapped_metrics.append(wrapped_metric)
             self.compile(optimizer=optimizer,
                          loss=wrapped_loss,
                          metrics=wrapped_metrics,
-                         weighted_metrics=wrapped_metrics,
                          **kwargs)
 
     def _get_visualization_callback(self, dataset, log_dir):
@@ -127,7 +125,6 @@ class BaseSegmentationModel(BaseModel):
         super().train(dataset, num_epochs, model_directory, iterations_per_epoch,
                       callbacks=callbacks + custom_callbacks, save_steps=save_steps,
                       summary_steps=summary_steps,
-                      class_weight=self.config.class_weights,
                       **kwargs)
 
     # Override default method to add prediction visualization
@@ -155,5 +152,4 @@ class BaseSegmentationModel(BaseModel):
                                    save_steps=save_steps,
                                    summary_steps=summary_steps,
                                    callbacks=callbacks + custom_callbacks,
-                                   class_weight=self.config.class_weights,
                                    **kwargs)

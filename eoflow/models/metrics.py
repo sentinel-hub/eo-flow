@@ -75,15 +75,16 @@ class MeanIoU(InitializableMetric):
 class CroppedMetric(tf.keras.metrics.Metric):
     """ Wraps a metric. Crops the labels to match the logits size. """
 
-    def __init__(self, metric):
+    def __init__(self, metric, ignore_no_data=False):
         super().__init__(name=metric.name, dtype=metric.dtype)
         self.metric = metric
+        self.ignore_no_data = ignore_no_data
 
     def update_state(self, y_true, y_pred, sample_weight=None):
         logits_shape = tf.shape(y_pred)
-        labels_crop = tf.image.resize_with_crop_or_pad(y_true, logits_shape[1], logits_shape[2])
-
-        return self.metric.update_state(labels_crop, y_pred, sample_weight)
+        idx = 1 if self.ignore_no_data else 0
+        labels_crop = tf.image.resize_with_crop_or_pad(y_true, logits_shape[1], logits_shape[2][idx:])
+        return self.metric.update_state(labels_crop, y_pred[:, :, idx:], sample_weight)
 
     def result(self):
         return self.metric.result()
