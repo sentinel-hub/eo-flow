@@ -35,7 +35,7 @@ class BaseClassificationModel(BaseModel):
         learning_rate = fields.Float(missing=None, description='Learning rate used in training.', example=0.01)
         loss = fields.String(missing='cross_entropy', description='Loss function used for training.',
                              validate=OneOf(classification_losses.keys()))
-        metrics = fields.List(fields.String, missing=['accuracy', 'iou'],
+        metrics = fields.List(fields.String, missing=['accuracy'],
                               description='List of metrics used for evaluation.',
                               validate=ContainsOnly(classification_metrics.keys()))
 

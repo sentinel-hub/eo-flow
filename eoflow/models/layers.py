@@ -1,6 +1,137 @@
-from .conv_cells import ConvGRUCell
 import tensorflow as tf
 import numpy as np
+
+from tensorflow.keras.layers import Activation, SpatialDropout1D, Lambda
+from tensorflow.keras.layers import Conv1D, BatchNormalization, LayerNormalization
+
+from .conv_cells import ConvGRUCell
+
+
+class ResidualBlock(tf.keras.layers.Layer):
+    """ Code taken from keras-tcn implementation on available on
+    https://github.com/philipperemy/keras-tcn/blob/master/tcn/tcn.py#L140 """
+    def __init__(self,
+                 dilation_rate,
+                 nb_filters,
+                 kernel_size,
+                 padding,
+                 activation='relu',
+                 dropout_rate=0,
+                 kernel_initializer='he_normal',
+                 use_batch_norm=False,
+                 use_layer_norm=False,
+                 last_block=True,
+                 **kwargs):
+
+        """ Defines the residual block for the WaveNet TCN
+
+        :param dilation_rate: The dilation power of 2 we are using for this residual block
+        :param nb_filters: The number of convolutional filters to use in this block
+        :param kernel_size: The size of the convolutional kernel
+        :param padding: The padding used in the convolutional layers, 'same' or 'causal'.
+        :param activation: The final activation used in o = Activation(x + F(x))
+        :param dropout_rate: Float between 0 and 1. Fraction of the input units to drop.
+        :param kernel_initializer: Initializer for the kernel weights matrix (Conv1D).
+        :param use_batch_norm: Whether to use batch normalization in the residual layers or not.
+        :param use_layer_norm: Whether to use layer normalization in the residual layers or not.
+        :param last_block: Whether to add a residual connection to the convolution layer or not.
+        :param kwargs: Any initializers for Layer class.
+        """
+
+        self.dilation_rate = dilation_rate
+        self.nb_filters = nb_filters
+        self.kernel_size = kernel_size
+        self.padding = padding
+        self.activation = activation
+        self.dropout_rate = dropout_rate
+        self.use_batch_norm = use_batch_norm
+        self.use_layer_norm = use_layer_norm
+        self.kernel_initializer = kernel_initializer
+        self.last_block = last_block
+        self.residual_layers = list()
+        self.shape_match_conv = None
+        self.res_output_shape = None
+        self.final_activation = None
+
+        super(ResidualBlock, self).__init__(**kwargs)
+
+    def _add_and_activate_layer(self, layer):
+        """Helper function for building layer
+        Args:
+            layer: Appends layer to internal layer list and builds it based on the current output
+                   shape of ResidualBlocK. Updates current output shape.
+        """
+        self.residual_layers.append(layer)
+        self.residual_layers[-1].build(self.res_output_shape)
+        self.res_output_shape = self.residual_layers[-1].compute_output_shape(self.res_output_shape)
+
+    def build(self, input_shape):
+
+        with tf.keras.backend.name_scope(self.name):  # name scope used to make sure weights get unique names
+            self.res_output_shape = input_shape
+
+            for k in range(2):
+                name = f'conv1D_{k}'
+                with tf.keras.backend.name_scope(name):  # name scope used to make sure weights get unique names
+                    self._add_and_activate_layer(Conv1D(filters=self.nb_filters,
+                                                        kernel_size=self.kernel_size,
+                                                        dilation_rate=self.dilation_rate,
+                                                        padding=self.padding,
+                                                        name=name,
+                                                        kernel_initializer=self.kernel_initializer))
+
+                if self.use_batch_norm:
+                    self._add_and_activate_layer(BatchNormalization())
+                elif self.use_layer_norm:
+                    self._add_and_activate_layer(LayerNormalization())
+
+                self._add_and_activate_layer(Activation('relu'))
+                self._add_and_activate_layer(SpatialDropout1D(rate=self.dropout_rate))
+
+            if not self.last_block:
+                # 1x1 conv to match the shapes (channel dimension).
+                name = f'conv1D_{k+1}'
+                with tf.keras.backend.name_scope(name):
+                    # make and build this layer separately because it directly uses input_shape
+                    self.shape_match_conv = Conv1D(filters=self.nb_filters,
+                                                   kernel_size=1,
+                                                   padding='same',
+                                                   name=name,
+                                                   kernel_initializer=self.kernel_initializer)
+
+            else:
+                self.shape_match_conv = Lambda(lambda x: x, name='identity')
+
+            self.shape_match_conv.build(input_shape)
+            self.res_output_shape = self.shape_match_conv.compute_output_shape(input_shape)
+
+            self.final_activation = Activation(self.activation)
+            self.final_activation.build(self.res_output_shape)  # probably isn't necessary
+
+            # this is done to force keras to add the layers in the list to self._layers
+            for layer in self.residual_layers:
+                self.__setattr__(layer.name, layer)
+
+            super(ResidualBlock, self).build(input_shape)  # done to make sure self.built is set True
+
+    def call(self, inputs, training=None):
+        """
+        Returns: A tuple where the first element is the residual model tensor, and the second
+                 is the skip connection tensor.
+        """
+        x = inputs
+        for layer in self.residual_layers:
+            if isinstance(layer, SpatialDropout1D):
+                x = layer(x, training=training)
+            else:
+                x = layer(x)
+
+        x2 = self.shape_match_conv(inputs)
+        res_x = tf.keras.layers.add([x2, x])
+        return [self.final_activation(res_x), x]
+
+    def compute_output_shape(self, input_shape):
+        return [self.res_output_shape, self.res_output_shape]
 
 
 class Conv2D(tf.keras.layers.Layer):
