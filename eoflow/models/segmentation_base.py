@@ -79,13 +79,12 @@ class BaseSegmentationModel(BaseModel):
         # Wrap loss function
         # TODO: pass kwargs to loss from config
         if loss in segmentation_losses:
-            loss = segmentation_losses[loss](from_logits=True, class_weights=class_weights)
+            loss = segmentation_losses[loss](from_logits=True)
         wrapped_loss = cropped_loss(loss)
 
         # Wrap metrics
         wrapped_metrics = []
         for metric in metrics:
-
             if metric in segmentation_metrics:
                 metric = segmentation_metrics[metric]()
 
@@ -95,8 +94,11 @@ class BaseSegmentationModel(BaseModel):
 
             wrapped_metric = CroppedMetric(metric)
             wrapped_metrics.append(wrapped_metric)
-
-        self.compile(optimizer=optimizer, loss=wrapped_loss, metrics=wrapped_metrics, **kwargs)
+            self.compile(optimizer=optimizer,
+                         loss=wrapped_loss,
+                         metrics=wrapped_metrics,
+                         weighted_metrics=wrapped_metrics,
+                         **kwargs)
 
     def _get_visualization_callback(self, dataset, log_dir):
         ds = dataset.unbatch().batch(self.config.prediction_visualization_num).take(1)
@@ -124,7 +126,9 @@ class BaseSegmentationModel(BaseModel):
 
         super().train(dataset, num_epochs, model_directory, iterations_per_epoch,
                       callbacks=callbacks + custom_callbacks, save_steps=save_steps,
-                      summary_steps=summary_steps, **kwargs)
+                      summary_steps=summary_steps,
+                      class_weights=self.config.class_weights,
+                      **kwargs)
 
     # Override default method to add prediction visualization
     def train_and_evaluate(self,
@@ -148,5 +152,8 @@ class BaseSegmentationModel(BaseModel):
         super().train_and_evaluate(train_dataset, val_dataset,
                                    num_epochs, iterations_per_epoch,
                                    model_directory,
-                                   save_steps=save_steps, summary_steps=summary_steps,
-                                   callbacks=callbacks + custom_callbacks, **kwargs)
+                                   save_steps=save_steps,
+                                   summary_steps=summary_steps,
+                                   callbacks=callbacks + custom_callbacks,
+                                   class_weights=self.config.class_weights,
+                                   **kwargs)
