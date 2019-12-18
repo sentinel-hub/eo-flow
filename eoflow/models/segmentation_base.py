@@ -127,7 +127,7 @@ class BaseSegmentationModel(BaseModel):
         super().train(dataset, num_epochs, model_directory, iterations_per_epoch,
                       callbacks=callbacks + custom_callbacks, save_steps=save_steps,
                       summary_steps=summary_steps,
-                      class_weights=self.config.class_weights,
+                      class_weight=self.config.class_weights,
                       **kwargs)
 
     # Override default method to add prediction visualization
@@ -155,5 +155,5 @@ class BaseSegmentationModel(BaseModel):
                                    save_steps=save_steps,
                                    summary_steps=summary_steps,
                                    callbacks=callbacks + custom_callbacks,
-                                   class_weights=self.config.class_weights,
+                                   class_weight=self.config.class_weights,
                                    **kwargs)
