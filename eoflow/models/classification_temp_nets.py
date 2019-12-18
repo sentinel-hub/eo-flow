@@ -34,8 +34,6 @@ class TCNModel(BaseClassificationModel):
         use_batch_norm = fields.Bool(missing=False, description='Whether to use batch normalisation.')
         use_layer_norm = fields.Bool(missing=False, description='Whether to use layer normalisation.')
 
-        class_weights = fields.List(fields.Float, missing=None, description='Class weights used in training.')
-
     def build(self, inputs_shape):
         """ Build TCN architecture
 
@@ -120,8 +118,6 @@ class TempCNNModel(BaseClassificationModel):
         kernel_regularizer = fields.Float(missing=1e-6, description='L2 regularization parameter.')
 
         use_batch_norm = fields.Bool(missing=False, description='Whether to use batch normalisation.')
-
-        class_weights = fields.List(fields.Float, missing=None, description='Class weights used in training.')
 
     def build(self, inputs_shape):
         """ Build TCN architecture
