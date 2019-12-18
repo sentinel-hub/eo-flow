@@ -88,6 +88,8 @@ class TCNModel(BaseClassificationModel):
 
         net = tf.keras.layers.Dense(self.config.n_classes)(net)
 
+        net = tf.keras.layers.Softmax()(net)
+
         self.net = tf.keras.Model(inputs=x, outputs=net)
 
     def call(self, inputs, training=None):
@@ -158,6 +160,8 @@ class TempCNNModel(BaseClassificationModel):
         net = tf.keras.layers.Dense(units=self.config.n_classes,
                                     kernel_initializer=self.config.kernel_initializer,
                                     kernel_regularizer=tf.keras.regularizers.l2(self.config.kernel_regularizer))(net)
+
+        net = tf.keras.layers.Softmax()(net)
 
         self.net = tf.keras.Model(inputs=x, outputs=net)
 

@@ -117,6 +117,8 @@ class FCNModel(BaseSegmentationModel):
                 filters=self.config.n_classes,
                 kernel_size=1)(net)
 
+        logits = tf.keras.layers.Softmax()(logits)
+
         self.net = tf.keras.Model(inputs=x, outputs=logits)
 
     def call(self, inputs, training=None):
@@ -238,6 +240,8 @@ class TFCNModel(BaseSegmentationModel):
         logits = tf.keras.layers.Conv2D(
                 filters=self.config.n_classes,
                 kernel_size=1)(net)
+
+        logits = tf.keras.layers.Softmax()(logits)
 
         self.net = tf.keras.Model(inputs=x, outputs=logits)
 
