@@ -79,7 +79,7 @@ class BaseSegmentationModel(BaseModel):
         # Wrap loss function
         # TODO: pass kwargs to loss from config
         if loss in segmentation_losses:
-            loss = segmentation_losses[loss](from_logits=True)
+            loss = segmentation_losses[loss](from_logits=True, class_weights=class_weights)
         wrapped_loss = cropped_loss(loss)
 
         # Wrap metrics
