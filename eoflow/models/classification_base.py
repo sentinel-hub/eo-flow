@@ -23,7 +23,9 @@ classification_losses = {
 
 # Available metrics. Add keys with new metrics here.
 classification_metrics = {
-    'accuracy': tf.keras.metrics.CategoricalAccuracy(name='accuracy')
+    'accuracy': tf.keras.metrics.CategoricalAccuracy(name='accuracy'),
+    'precision': tf.keras.metrics.Precision,
+    'recall': tf.keras.metrics.Recall
 }
 
 
@@ -35,7 +37,7 @@ class BaseClassificationModel(BaseModel):
         learning_rate = fields.Float(missing=None, description='Learning rate used in training.', example=0.01)
         loss = fields.String(missing='cross_entropy', description='Loss function used for training.',
                              validate=OneOf(classification_losses.keys()))
-        metrics = fields.List(fields.String, missing=['accuracy', 'iou'],
+        metrics = fields.List(fields.String, missing=['accuracy'],
                               description='List of metrics used for evaluation.',
                               validate=ContainsOnly(classification_metrics.keys()))
 
@@ -75,7 +77,14 @@ class BaseClassificationModel(BaseModel):
         for metric in metrics:
 
             if metric in classification_metrics:
-                metric = classification_metrics[metric]
+                if metric in ['precision', 'recall']:
+                    reported_metrics += [classification_metrics[metric](top_k=1,
+                                                                        class_id=class_id,
+                                                                        name=f'{metric}_{class_id}')
+                                         for class_id in range(self.config.n_classes)]
+                    continue
+                else:
+                    metric = classification_metrics[metric]
 
             # Initialize initializable metrics
             if isinstance(metric, InitializableMetric):

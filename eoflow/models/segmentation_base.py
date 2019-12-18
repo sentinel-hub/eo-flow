@@ -27,7 +27,9 @@ segmentation_losses = {
 # Available metrics. Add keys with new metrics here.
 segmentation_metrics = {
     'accuracy': lambda: tf.keras.metrics.CategoricalAccuracy(name='accuracy'),
-    'iou': lambda: MeanIoU(default_max_classes=32)
+    'iou': lambda: MeanIoU(default_max_classes=32),
+    'precision': tf.keras.metrics.Precision,
+    'recall': tf.keras.metrics.Recall
 }
 
 
@@ -87,7 +89,14 @@ class BaseSegmentationModel(BaseModel):
         for metric in metrics:
 
             if metric in segmentation_metrics:
-                metric = segmentation_metrics[metric]()
+                if metric in ['precision', 'recall']:
+                    wrapped_metrics += [CroppedMetric(segmentation_metrics[metric](top_k=1,
+                                                                                   class_id=class_id,
+                                                                                   name=f'{metric}_{class_id}'))
+                                        for class_id in range(self.config.n_classes)]
+                    continue
+                else:
+                    metric = segmentation_metrics[metric]()
 
             # Initialize initializable metrics
             if isinstance(metric, InitializableMetric):
