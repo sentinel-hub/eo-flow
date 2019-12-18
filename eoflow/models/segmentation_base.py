@@ -109,7 +109,7 @@ class BaseSegmentationModel(BaseModel):
     def train(self, dataset,
               num_epochs,
               model_directory,
-              iterations_per_epoch,
+              iterations_per_epoch=None,
               class_weights=None,
               callbacks=[],
               save_steps='epoch',

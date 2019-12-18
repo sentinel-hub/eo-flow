@@ -1,3 +1,1 @@
-from .fcn_model import FCNModel
-from .tfcn_model import TFCNModel
-# from .rfcn_model import RFCNModel
+from .segmentation_unets import FCNModel, TFCNModel
