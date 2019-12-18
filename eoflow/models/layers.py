@@ -23,20 +23,19 @@ class ResidualBlock(tf.keras.layers.Layer):
                  last_block=True,
                  **kwargs):
 
-        """Defines the residual block for the WaveNet TCN
-        Args:
-            x: The previous layer in the model
-            training: boolean indicating whether the layer should behave in training mode or in inference mode
-            dilation_rate: The dilation power of 2 we are using for this residual block
-            nb_filters: The number of convolutional filters to use in this block
-            kernel_size: The size of the convolutional kernel
-            padding: The padding used in the convolutional layers, 'same' or 'causal'.
-            activation: The final activation used in o = Activation(x + F(x))
-            dropout_rate: Float between 0 and 1. Fraction of the input units to drop.
-            kernel_initializer: Initializer for the kernel weights matrix (Conv1D).
-            use_batch_norm: Whether to use batch normalization in the residual layers or not.
-            use_layer_norm: Whether to use layer normalization in the residual layers or not.
-            kwargs: Any initializers for Layer class.
+        """ Defines the residual block for the WaveNet TCN
+
+        :param dilation_rate: The dilation power of 2 we are using for this residual block
+        :param nb_filters: The number of convolutional filters to use in this block
+        :param kernel_size: The size of the convolutional kernel
+        :param padding: The padding used in the convolutional layers, 'same' or 'causal'.
+        :param activation: The final activation used in o = Activation(x + F(x))
+        :param dropout_rate: Float between 0 and 1. Fraction of the input units to drop.
+        :param kernel_initializer: Initializer for the kernel weights matrix (Conv1D).
+        :param use_batch_norm: Whether to use batch normalization in the residual layers or not.
+        :param use_layer_norm: Whether to use layer normalization in the residual layers or not.
+        :param last_block: Whether to add a residual connection to the convolution layer or not.
+        :param kwargs: Any initializers for Layer class.
         """
 
         self.dilation_rate = dilation_rate
