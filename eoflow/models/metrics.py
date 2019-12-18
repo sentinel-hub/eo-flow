@@ -83,8 +83,8 @@ class CroppedMetric(tf.keras.metrics.Metric):
     def update_state(self, y_true, y_pred, sample_weight=None):
         logits_shape = tf.shape(y_pred)
         idx = 1 if self.ignore_no_data else 0
-        labels_crop = tf.image.resize_with_crop_or_pad(y_true, logits_shape[1], logits_shape[2][idx:])
-        return self.metric.update_state(labels_crop, y_pred[:, :, idx:], sample_weight)
+        labels_crop = tf.image.resize_with_crop_or_pad(y_true, logits_shape[1], logits_shape[2])
+        return self.metric.update_state(labels_crop[..., idx:], y_pred[..., idx:], sample_weight)
 
     def result(self):
         return self.metric.result()
