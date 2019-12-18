@@ -71,7 +71,7 @@ class BaseClassificationModel(BaseModel):
         class_weights = self._prepare_class_weights()
 
         # TODO: pass kwargs to loss from config
-        loss = classification_losses[loss](from_logits=True, class_weights=class_weights)
+        loss = classification_losses[loss](from_logits=False, class_weights=class_weights)
 
         reported_metrics = []
         for metric in metrics:
