@@ -102,7 +102,7 @@ class TempCNNModel(BaseClassificationModel):
         https://github.com/charlotte-pel/temporalCNN
     """
 
-    class TCNModelSchema(BaseClassificationModel._Schema):
+    class TempCNNModelSchema(BaseClassificationModel._Schema):
         keep_prob = fields.Float(required=True, description='Keep probability used in dropout layers.', example=0.5)
 
         kernel_size = fields.Int(missing=5, description='Size of the convolution kernels.')

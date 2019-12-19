@@ -61,6 +61,9 @@ class Configurable(ABC):
 
         return Config(self.schema.load(config_specs))
 
+    def show_config(self):
+        print(json.dumps(self.config, indent=4))
+
 
 class Config(Munch):
     """ Config object used for automatic object creation from a dict.
