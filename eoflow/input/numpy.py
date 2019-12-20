@@ -82,15 +82,23 @@ def npz_dir_dataset(file_dir_or_list, features, num_parallel=5, shuffle_size=100
 
 def _npz_file_lazy_dataset(file_path, fields, feature_names, types, shapes):
     """ Creates a lazy tf.data Dataset from a numpy file.
-    Reads the file when first called.
+    Reads the file when first consumed.
 
-    file_path: path to the numpy file,
-    fields: fields to read from the numpy file,
-    types: types of the numpy fields,
-    shapes: shapes of the numpy fields
+    :param file_path: path to the numpy file
+    :type file_path: str
+    :param fields: fields to read from the numpy file
+    :type fields: list(str)
+    :param feature_names: feature names assigned to the fields
+    :type feature_names: list(str)
+    :param types: types of the numpy fields
+    :type types: list(np.dtype)
+    :param shapes: shapes of the numpy fields
+    :type shapes: list(tuple)
 
-    returns: tf.data.Dataset
+    :return: dataset containing examples from the file
+    :rtype: tf.data.Dataset
     """
+
 
     def _generator():
         data = np.load(file_path)
