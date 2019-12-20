@@ -19,7 +19,7 @@
                     "input_shape": [512],
                     "num_classes": 10,
                     "batch_size": 20,
-                    "batches_per_epoch": 1000
+                    "batches_per_epoch": 200
                 }
             },
             "val_input_config":{
@@ -28,7 +28,7 @@
                     "input_shape": [512],
                     "num_classes": 10,
                     "batch_size": 1,
-                    "batches_per_epoch": 1000
+                    "batches_per_epoch": 200
                 }
             },
             "save_steps": 400,
