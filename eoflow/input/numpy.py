@@ -35,7 +35,8 @@ def numpy_dataset(np_array_dict):
     return ds
 
 def npz_dir_dataset(file_dir_or_list, features, num_parallel=5, shuffle_size=100):
-    """ Creates a tf.data.Dataset from a directory containing numpy .npz files.
+    """ Creates a tf.data.Dataset from a directory containing numpy .npz files. Files are loaded
+    lazily when needed. `num_parallel` files are read in parallel and interleaved together.
 
     :param file_dir_or_list: directory containing .npz files or a list of paths to .npz files
     :type file_dir_or_list: str | list(str)
