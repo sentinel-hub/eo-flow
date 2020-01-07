@@ -4,8 +4,9 @@ from marshmallow import fields
 from marshmallow.validate import OneOf
 
 from tensorflow.keras.layers import SimpleRNN, LSTM, GRU
+from tensorflow.python.keras.utils.layer_utils import print_summary
 
-from .layers import ResidualBlock
+from .layers import ResidualBlock, Encoder
 from .classification_base import BaseClassificationModel
 
 logging.basicConfig(level=logging.INFO,
@@ -96,6 +97,8 @@ class TCNModel(BaseClassificationModel):
 
         self.net = tf.keras.Model(inputs=x, outputs=net)
 
+        print_summary(self.net)
+
     def call(self, inputs, training=None):
         return self.net(inputs, training)
 
@@ -169,6 +172,8 @@ class TempCNNModel(BaseClassificationModel):
 
         self.net = tf.keras.Model(inputs=x, outputs=net)
 
+        print_summary(self.net)
+
     def call(self, inputs, training=None):
         return self.net(inputs, training)
 
@@ -226,5 +231,67 @@ class BiRNN(BaseClassificationModel):
 
         self.net = tf.keras.Model(inputs=x, outputs=net)
 
+        print_summary(self.net)
+
     def call(self, inputs, training=None):
         return self.net(inputs, training)
+
+
+class TransformerEncoder(BaseClassificationModel):
+    """ Implementation of a self-attention classifier
+
+    Code is based on the Pytorch implementation of Marc Russwurm https://github.com/MarcCoru/crop-type-mapping
+    """
+
+    class TransformerEncoderSchema(BaseClassificationModel._Schema):
+        keep_prob = fields.Float(required=True, description='Keep probability used in dropout layers.', example=0.5)
+
+        num_heads = fields.Int(missing=8, description='Number of Attention heads.')
+        num_layers = fields.Int(missing=4, description='Number of encoder layers.')
+        num_dff = fields.Int(missing=512, description='Number of feed-forward neurons in point-wise MLP.')
+        d_model = fields.Int(missing=128, description='Depth of model.')
+        max_pos_enc = fields.Int(missing=24, description='Maximum length of positional encoding.')
+        layer_norm = fields.Bool(missing=True, description='Whether to apply layer normalization in the encoder.')
+
+        activation = fields.Str(missing='linear', description='Activation function used in final dense filters.')
+
+    def __init__(self, config_specs):
+        super(TransformerEncoder, self).__init__(config_specs)
+
+        self.encoder = Encoder(num_layers=self.config.num_layers,
+                               d_model=self.config.d_model,
+                               num_heads=self.config.num_heads,
+                               dff=self.config.num_dff,
+                               maximum_position_encoding=self.config.max_pos_enc,
+                               layer_norm=self.config.layer_norm)
+
+        self.dense = tf.keras.layers.Dense(units=self.config.n_classes,
+                                           activation=self.config.activation)
+
+    def build(self, inputs_shape):
+        """ Build Transformer encoder architecture
+
+        The `inputs_shape` argument is a `(N, T, D)` tuple where `N` denotes the number of samples, `T` the number of
+        time-frames, and `D` the number of channels
+        """
+        seq_len = inputs_shape[1]
+
+        x = tf.keras.layers.Input(inputs_shape[1:])
+
+        net = x
+
+        net = self.encoder(net)
+
+        net = self.dense(net)
+
+        net = tf.keras.layers.MaxPool1D(pool_size=seq_len)(net)
+        net = tf.keras.backend.squeeze(net, axis=-2)
+
+        net = tf.keras.layers.Softmax()(net)
+
+        self.net = tf.keras.Model(inputs=x, outputs=net)
+
+        print_summary(self.net)
+
+    def call(self, inputs, training=None, mask=None):
+        return self.net(inputs, training, mask)
