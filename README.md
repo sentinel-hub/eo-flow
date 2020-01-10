@@ -16,11 +16,11 @@ $ pip install .
 
 ## Getting started
 
-The `eoflow` package can be used in two ways. For best control over the workflow and faster prototyping, the package can be used programmaticaly (in code). The example notebook should help you get started with that. It demonstrates how to prepare a dataset pipeline, train the model, evaluate the model and make predictions using the trained model.
+The `eoflow` package can be used in two ways. For best control over the workflow and faster prototyping, the package can be used programmaticaly (in code). The [example notebook](examples/notebook.ipynb) should help you get started with that. It demonstrates how to prepare a dataset pipeline, train the model, evaluate the model and make predictions using the trained model.
 
 An alternate way of using `eoflow` is by writing configuration files and running them using eoflow's execute script. Configuration files specify and configure the task (training, evaluation, etc.) and contain the configurations of the model and input methods. Example configurations are provided in the `configs` directory. Once a configuration file is created it can be executed using the execute command.
 
-A simple example can be run using the following command.
+A simple example can be run using the following command. More advanced configurations are also provided.
 ```
 $ python -m eoflow.execute configs/example.json
 ```
@@ -34,7 +34,7 @@ $ tensorboard --logdir=temp/experiment
 
 ## Writing custom code
 
-To get started with writing custom models and input methods for `eoflow` take a look at the example implementations (`examples` folder). Custom classes use schemas to define the configuration parameters in order to work with the execute script and configuration files. Since eoflow builds on top of TF2 and Keras, model building is very similar.
+To get started with writing custom models and input methods for `eoflow` take a look at the example implementations ([`examples` folder](examples/)). Custom classes use schemas to define the configuration parameters in order to work with the execute script and configuration files. Since eoflow builds on top of TF2 and Keras, model building is very similar.
 
 ## Package structure
 
