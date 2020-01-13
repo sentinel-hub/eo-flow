@@ -16,7 +16,7 @@ $ pip install .
 
 ## Getting started
 
-The `eoflow` package can be used in two ways. For best control over the workflow and faster prototyping, the package can be used programmaticaly (in code). The [example notebook](examples/notebook.ipynb) should help you get started with that. It demonstrates how to prepare a dataset pipeline, train the model, evaluate the model and make predictions using the trained model.
+The `eoflow` package can be used in two ways. For best control over the workflow and faster prototyping, the package can be used programmatically (in code). The [example notebook](examples/notebook.ipynb) should help you get started with that. It demonstrates how to prepare a dataset pipeline, train the model, evaluate the model and make predictions using the trained model.
 
 An alternate way of using `eoflow` is by writing configuration files and running them using eoflow's execute script. Configuration files specify and configure the task (training, evaluation, etc.) and contain the configurations of the model and input methods. Example configurations are provided in the `configs` directory. Once a configuration file is created it can be executed using the execute command.
 
@@ -27,7 +27,7 @@ $ python -m eoflow.execute configs/example.json
 
 This will create an output folder `temp/experiment` containing the tensorboard logs and model checkpoints.
 
-To visualise the logs in TensorBoard, run
+To visualize the logs in TensorBoard, run
 ```
 $ tensorboard --logdir=temp/experiment
 ```
@@ -59,7 +59,7 @@ Segmentation models:
 * **Temporal FCN**, where the whole time-series is considered as a 3D MSI volume and convolutions are performed along the temporal dimension as well spatial dimension. The output of the network is a 2D label map as in previous cases.
 
 Classification models:
-* **TCN**: Implementation of the TCN network taken form the [keras-TCN implementation](https://github.com/philipperemy/keras-tcn)
-* **TempCNN**: Implementation of the TempCNN network taken from the [temporalCNN implementation](https://github.com/charlotte-pel/temporalCNN)**
+* **TCN**: Implementation of the TCN network taken from the [keras-TCN implementation](https://github.com/philipperemy/keras-tcn).
+* **TempCNN**: Implementation of the TempCNN network taken from the [temporalCNN implementation](https://github.com/charlotte-pel/temporalCNN).
 
 Model descriptions and examples are available [here](MODELS.md).
