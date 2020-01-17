@@ -288,6 +288,10 @@ class TransformerEncoder(BaseClassificationModel):
             tf.keras.layers.Lambda(lambda x: tf.keras.backend.squeeze(x, axis=-2), name='squeeze'),
             tf.keras.layers.Softmax()
         ])
+        # Build the model, so we can print the summary
+        self.net.build(inputs_shape)
+
+        print_summary(self.net)
 
     def call(self, inputs, training=None, mask=None):
         return self.net(inputs, training, mask)
