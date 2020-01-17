@@ -6,8 +6,10 @@ from marshmallow.validate import OneOf
 from tensorflow.keras.layers import SimpleRNN, LSTM, GRU
 from tensorflow.python.keras.utils.layer_utils import print_summary
 
-from .layers import ResidualBlock, Encoder
+from .layers import ResidualBlock
 from .classification_base import BaseClassificationModel
+
+from . import transformer_encoder_layers
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
@@ -258,15 +260,15 @@ class TransformerEncoder(BaseClassificationModel):
 
         activation = fields.Str(missing='linear', description='Activation function used in final dense filters.')
 
-    def __init__(self, config_specs):
-        super(TransformerEncoder, self).__init__(config_specs)
+    def init_model(self):
 
-        self.encoder = Encoder(num_layers=self.config.num_layers,
-                               d_model=self.config.d_model,
-                               num_heads=self.config.num_heads,
-                               dff=self.config.num_dff,
-                               maximum_position_encoding=self.config.max_pos_enc,
-                               layer_norm=self.config.layer_norm)
+        self.encoder = transformer_encoder_layers.Encoder(
+            num_layers=self.config.num_layers,
+            d_model=self.config.d_model,
+            num_heads=self.config.num_heads,
+            dff=self.config.num_dff,
+            maximum_position_encoding=self.config.max_pos_enc,
+            layer_norm=self.config.layer_norm)
 
         self.dense = tf.keras.layers.Dense(units=self.config.n_classes,
                                            activation=self.config.activation)
@@ -279,22 +281,13 @@ class TransformerEncoder(BaseClassificationModel):
         """
         seq_len = inputs_shape[1]
 
-        x = tf.keras.layers.Input(inputs_shape[1:])
-
-        net = x
-
-        net = self.encoder(net)
-
-        net = self.dense(net)
-
-        net = tf.keras.layers.MaxPool1D(pool_size=seq_len)(net)
-        net = tf.keras.backend.squeeze(net, axis=-2)
-
-        net = tf.keras.layers.Softmax()(net)
-
-        self.net = tf.keras.Model(inputs=x, outputs=net)
-
-        print_summary(self.net)
+        self.net = tf.keras.Sequential([
+            self.encoder,
+            self.dense,
+            tf.keras.layers.MaxPool1D(pool_size=seq_len),
+            tf.keras.layers.Lambda(lambda x: tf.keras.backend.squeeze(x, axis=-2), name='squeeze'),
+            tf.keras.layers.Softmax()
+        ])
 
     def call(self, inputs, training=None, mask=None):
         return self.net(inputs, training, mask)
