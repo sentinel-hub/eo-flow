@@ -193,38 +193,41 @@ class BiRNN(BaseClassificationModel):
         kernel_initializer = fields.Str(missing='he_normal', description='Method to initialise kernel parameters.')
         kernel_regularizer = fields.Float(missing=1e-6, description='L2 regularization parameter.')
 
-    def build(self, inputs_shape):
-        """ Build RNN architecture
 
-        The `inputs_shape` argument is a `(N, T, D)` tuple where `N` denotes the number of samples, `T` the number of
-        time-frames, and `D` the number of channels
-        """
-        x = tf.keras.layers.Input(inputs_shape[1:])
+    def _rnn_layer(self, last=False):
+        """ Returns a RNN layer for current configuration. Use `last=True` for the last RNN layer. """
 
+        RNNLayer = rnn_layers[self.config.rnn_layer]
         dropout_rate = 1 - self.config.keep_prob
 
-        net = x
+        layer = RNNLayer(units=self.config.rnn_units,
+                         dropout=dropout_rate,
+                         return_sequences=False if last else True)
 
-        for _ in range(self.config.rnn_blocks-1):
-            layer = rnn_layers[self.config.rnn_layer](units=self.config.rnn_units,
-                                                      dropout=dropout_rate,
-                                                      return_sequences=True)
+        # Use bidirectional if specified
+        if self.config.bidirectional:
+            layer = tf.keras.layers.Bidirectional(layer)
 
-            net = tf.keras.layers.Bidirectional(layer)(net) if self.config.bidirectional else layer(net)
+        return layer
 
-        layer = rnn_layers[self.config.rnn_layer](units=self.config.rnn_units,
-                                                  dropout=dropout_rate)
+    def init_model(self):
+        """ Creates the RNN model architecture. """
 
-        net = tf.keras.layers.Bidirectional(layer)(net) if self.config.bidirectional else layer(net)
+        # RNN layers
+        layers = [self._rnn_layer() for _ in range(self.config.rnn_blocks-1)]
+        layers.append(self._rnn_layer(last=True))
 
-        net = tf.keras.layers.Dense(units=self.config.n_classes,
-                                    activation=self.config.activation,
-                                    kernel_initializer=self.config.kernel_initializer,
-                                    kernel_regularizer=tf.keras.regularizers.l2(self.config.kernel_regularizer))(net)
+        dense = tf.keras.layers.Dense(units=self.config.n_classes,
+                                      activation=self.config.activation,
+                                      kernel_initializer=self.config.kernel_initializer,
+                                      kernel_regularizer=tf.keras.regularizers.l2(self.config.kernel_regularizer))
 
-        net = tf.keras.layers.Softmax()(net)
+        softmax = tf.keras.layers.Softmax()
 
-        self.net = tf.keras.Model(inputs=x, outputs=net)
+        layers.append(dense)
+        layers.append(softmax)
+
+        self.net = tf.keras.Sequential(layers)
 
     def call(self, inputs, training=None):
         return self.net(inputs, training)
