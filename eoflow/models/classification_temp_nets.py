@@ -236,6 +236,9 @@ class BiRNN(BaseClassificationModel):
 
         self.net = tf.keras.Sequential(layers)
 
+    def build(self, inputs_shape):
+        self.net.build(inputs_shape)
+
         print_summary(self.net)
 
     def call(self, inputs, training=None):
