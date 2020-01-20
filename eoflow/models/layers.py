@@ -1,5 +1,4 @@
 import tensorflow as tf
-import numpy as np
 
 from tensorflow.keras.layers import Activation, SpatialDropout1D, Lambda
 from tensorflow.keras.layers import Conv1D, BatchNormalization, LayerNormalization
@@ -334,44 +333,3 @@ def conv2d_gru(input_, nfeats_out, k_size=3, scope='reduce_t', padding='VALID', 
 
         return outputs[:, -1, :, :, :]
 
-
-def weighted_cross_entropy(flat_logits, flat_labels, class_weights):
-    """ Compute weighted cross-entropy assigning different weights to different classes
-
-        Labels and digits need be flattened, i.e. 2-dimensional with second dimension equal to the number of classes
-    """
-    class_weights = tf.constant(np.asarray(class_weights, dtype=np.float32))
-    weight_map = tf.reduce_max(tf.multiply(flat_labels, class_weights), axis=1)
-    loss_map = tf.nn.softmax_cross_entropy_with_logits_v2(logits=flat_logits, labels=flat_labels)
-    weighted_loss = tf.multiply(loss_map, weight_map)
-    loss = tf.reduce_mean(weighted_loss)
-    return loss
-
-
-def compute_iou_loss(n_classes, probs, preds, labels, class_weights=None, exclude_background=True):
-    """ Compute Intersection-Over-Union (Jaccard metric) loss
-
-    This loss is proportional to the Dice score, but is actually a metric
-    """
-    eps = 1e-5
-    iou_loss = 0
-    classes = np.arange(1, n_classes) if exclude_background else np.arange(n_classes)
-    # valid_classes = 0
-    for i in classes:  # Loop through classes excluding back-ground
-        slice_prob = tf.squeeze(tf.slice(probs, [0, 0, 0, i], [-1, -1, -1, 1]), axis=-1)
-        slice_pred = tf.cast(tf.equal(preds, i), tf.float32)
-        slice_label = tf.squeeze(tf.slice(labels, [0, 0, 0, i], [-1, -1, -1, 1]), axis=-1)
-        intersection_prob = tf.reduce_sum(tf.multiply(slice_prob, slice_label), axis=[1, 2])
-        intersection_pred = tf.reduce_sum(tf.multiply(slice_pred, slice_label), axis=[1, 2])
-        union = eps + tf.reduce_sum(slice_pred, axis=[1, 2]) + tf.reduce_sum(slice_label, axis=[1, 2]) \
-                - intersection_pred
-        # this is mean over batch
-        multiplier = 1/len(classes) if class_weights is None else class_weights[i]/np.sum(class_weights)
-        iou_loss += multiplier * tf.reduce_mean(tf.math.divide(intersection_prob, union))
-        # # only labels appearing in the batch count towards the loss (e.g. tundra or wetland are not considered)
-        # valid_classes = tf.cond(tf.reduce_sum(slice_label) > 0, lambda: tf.add(valid_classes, 1),
-        #                         lambda: tf.add(valid_classes, 0))
-    # # catch the case where there are no labels at all in ground-truth (just no-data)
-    # valid_classes = tf.cond(tf.equal(valid_classes, 0), lambda: 1, lambda: valid_classes)
-    iou_loss = 1 - iou_loss
-    return iou_loss
