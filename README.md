@@ -59,7 +59,7 @@ Project also contains other folders:
 
 Segmentation models for land cover semantic segmentation:
 * **Fully-Convolutional-Network (FCN, a.k.a. U-net)**, vanilla implementation of method described in this [paper](https://arxiv.org/abs/1505.04597). This network expects 2D MSI images as inputs and predicts 2D label maps as output.
-* **Temporal FCN**, where the whole time-series is considered as a 3D MSI volume and convolutions are performed along the temporal dimension as well spatial dimension. The output of the network is a 2D label map as in previous cases. MOre details can be found in this [paper](https://www.researchgate.net/publication/333262625_Spatio-Temporal_Deep_Learning_An_Application_to_Land_Cover_Classification).
+* **Temporal FCN**, where the whole time-series is considered as a 3D MSI volume and convolutions are performed along the temporal dimension as well spatial dimension. The output of the network is a 2D label map as in previous cases. More details can be found in this [paper](https://www.researchgate.net/publication/333262625_Spatio-Temporal_Deep_Learning_An_Application_to_Land_Cover_Classification).
 
 Classification models for crop classification using time-series:
 * **TCN**: Implementation of the TCN network taken from the [keras-TCN implementation by Philippe Remy](https://github.com/philipperemy/keras-tcn).
