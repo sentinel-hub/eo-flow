@@ -99,15 +99,15 @@ def point_wise_feed_forward_network(d_model, dff):
     ])
 
 
-def get_angles(pos, i, d_model):
-    angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
-    return pos * angle_rates
+def positional_encoding(position, d_model, T=10000):
 
+    def _get_angles(pos, i, d_model):
+        angle_rates = 1 / np.power(T, (2 * (i//2)) / np.float32(d_model))
+        return pos * angle_rates
 
-def positional_encoding(position, d_model):
-    angle_rads = get_angles(np.arange(position)[:, np.newaxis],
+    angle_rads = _get_angles(np.arange(position)[:, np.newaxis],
                             np.arange(d_model)[np.newaxis, :],
-                            d_model)
+                            d_model, T=T)
 
     # apply sin to even indices in the array; 2i
     angle_rads[:, 0::2] = np.sin(angle_rads[:, 0::2])
@@ -146,7 +146,7 @@ class EncoderLayer(tf.keras.layers.Layer):
 
 
 class Encoder(tf.keras.layers.Layer):
-    def __init__(self, num_layers, d_model, num_heads, dff, maximum_position_encoding, rate=0.1, layer_norm=False):
+    def __init__(self, num_layers, d_model, num_heads, dff, maximum_position_encoding, rate=0.1, layer_norm=False, T=10000):
         super(Encoder, self).__init__()
 
         self.d_model = d_model
@@ -157,7 +157,7 @@ class Encoder(tf.keras.layers.Layer):
         # replace embedding with 1d convolution
         self.conv1d = Conv1D(d_model, 1)
         # self.embedding = tf.keras.layers.Embedding(input_vocab_size, d_model)
-        self.pos_encoding = positional_encoding(maximum_position_encoding, self.d_model)
+        self.pos_encoding = positional_encoding(maximum_position_encoding, self.d_model, T=T)
 
         self.enc_layers = [EncoderLayer(d_model, num_heads, dff, rate)
                            for _ in range(num_layers)]
