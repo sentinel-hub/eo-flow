@@ -3,8 +3,6 @@ import tensorflow as tf
 from tensorflow.keras.layers import Activation, SpatialDropout1D, Lambda
 from tensorflow.keras.layers import Conv1D, BatchNormalization, LayerNormalization
 
-from .conv_cells import ConvGRUCell
-
 
 class ResidualBlock(tf.keras.layers.Layer):
     """ Code taken from keras-tcn implementation on available on
@@ -296,40 +294,3 @@ class Reduce3DTo2D(tf.keras.layers.Layer):
 
         # Squeeze along temporal dimension
         return tf.squeeze(r, axis=[1])
-
-
-# OLD, NOT YET CONVERTED
-
-def conv2d_gru(input_, nfeats_out, k_size=3, scope='reduce_t', padding='VALID', return_sequence=False):
-    """ Convolution GRU layer that takes as input a 5D tensor of shape [N, T, H, W, C] and operates over the temporal
-        dimension. The resulting tensor has shape [N, H, W, C] if `return_sequence` is `False`, [N, T, H, W, C]
-        otherwise.
-
-        Cropping of the output tensor is applied if valid padding is chosen
-
-        :param input_: Input 5D tensor of shape [N, T, H, W, C]
-        :param nfeats_out: Number of channels/features in output tensor
-        :param k_size: Dimension of filter kernel. Default is `3`
-        :param scope: Scope of operation
-        :param padding: Padding for output tensor. If `VALID`, the tensor is cropped along height and width
-        :param return_sequence: Whether to return a 5D or 4D array (only last temporal frame considered)
-        :return: Resulting tensor
-
-    """
-    with tf.variable_scope(scope):
-
-        input_shape = input_.get_shape().as_list()
-
-        cell = ConvGRUCell([input_shape[2], input_shape[3]], nfeats_out, [k_size, k_size])
-
-        outputs, _ = tf.nn.dynamic_rnn(cell, input_, dtype=input_.dtype)
-
-        if padding.lower() == 'valid':
-            offs = (k_size-1)//2
-            outputs = outputs[:, :, offs:-offs, offs:-offs, :]
-
-        if return_sequence:
-            return outputs
-
-        return outputs[:, -1, :, :, :]
-
