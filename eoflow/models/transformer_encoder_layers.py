@@ -179,10 +179,10 @@ class Encoder(tf.keras.layers.Layer):
 
         x = self.dropout(x, training=training)
 
-        if self.lnorm_out:
-            x = self.lnorm_out(x)
-
         for i in range(self.num_layers):
             x = self.enc_layers[i](x, training, mask)
+
+        if self.lnorm_out:
+            x = self.lnorm_out(x)
 
         return x  # (batch_size, input_seq_len, d_model)
