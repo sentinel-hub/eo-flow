@@ -10,6 +10,7 @@ from .layers import ResidualBlock
 from .classification_base import BaseClassificationModel
 
 from . import transformer_encoder_layers
+from . import pse_tae_layers
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
@@ -298,3 +299,52 @@ class TransformerEncoder(BaseClassificationModel):
 
     def call(self, inputs, training=None, mask=None):
         return self.net(inputs, training, mask)
+
+
+class PseTae(BaseClassificationModel):
+    """ Implementation of the Pixel-Set encoder + Temporal Attention Encoder sequence classifier
+
+    Code is based on the Pytorch implementation of V. Sainte Fare Garnot et al. https://github.com/VSainteuf/pytorch-psetae
+    """
+
+    class PseTaeSchema(BaseClassificationModel._Schema):
+        mlp1 = fields.List(fields.Int, missing=[10, 32, 64], description='Number of units for each layer in mlp1.')
+        pooling = fields.Str(missing='mean_std', description='Methods used for pooling. Seperated by underscore. (mean, std, max, min)')
+        mlp2 = fields.List(fields.Int, missing=[132, 128], description='Number of units for each layer in mlp2.')
+
+        num_heads = fields.Int(missing=4, description='Number of Attention heads.')
+        num_dff = fields.Int(missing=32, description='Number of feed-forward neurons in point-wise MLP.')
+        d_model = fields.Int(missing=None, description='Depth of model.')
+        mlp3 = fields.List(fields.Int, missing=[512, 128, 128], description='Number of units for each layer in mlp3.')
+        dropout = fields.Float(missing=0.2, description='Dropout rate for attention encoder.')
+        T = fields.Float(missing=1000, description='Number of features for attention.')
+        len_max_seq = fields.Int(missing=24, description='Number of features for attention.')
+        mlp4 = fields.List(fields.Int, missing=[128, 64, 32, 20], description='Number of units for each layer in mlp4.')
+
+    def init_model(self):
+
+        self.spatial_encoder = pse_tae_layers.PixelSetEncoder(
+            mlp1=self.config.mlp1,
+            mlp2=self.config.mlp2,
+            pooling=self.config.pooling)
+
+        self.temporal_encoder = pse_tae_layers.TemporalAttentionEncoder(
+            n_head=self.config.num_heads,
+            d_k=self.config.num_dff,
+            d_model=self.config.d_model,
+            n_neurons=self.config.mlp3,
+            dropout=self.config.dropout,
+            T=self.config.T,
+            len_max_seq=self.config.len_max_seq)
+
+        mlp4_layers = [pse_tae_layers.LinearLayer(out_dim) for out_dim in self.config.mlp4[:-1]]
+        mlp4_layers.append(pse_tae_layers.LinearLayer(self.config.mlp4[-1], batch_norm=False, activation=False))
+        self.mlp4 = tf.keras.Sequential(mlp4_layers)
+
+    def call(self, inputs, training=None, mask=None):
+
+        out = self.spatial_encoder(inputs, training=training, mask=mask)
+        out = self.temporal_encoder(out, training=training, mask=mask)
+        out = self.mlp4(out, training=training, mask=mask)
+
+        return out
