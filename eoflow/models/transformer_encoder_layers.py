@@ -153,18 +153,20 @@ class Encoder(tf.keras.layers.Layer):
         self.num_layers = num_layers
 
         self.lnorm_in = tf.keras.layers.LayerNormalization() if layer_norm else None
+        self.lnorm_conv = tf.keras.layers.LayerNormalization() if layer_norm else None
+        self.lnorm_out = tf.keras.layers.LayerNormalization() if layer_norm else None
 
         # replace embedding with 1d convolution
-        self.conv1d = Conv1D(d_model, 1)
+        self.conv_in = Conv1D(d_model, 1)
         # self.embedding = tf.keras.layers.Embedding(input_vocab_size, d_model)
         self.pos_encoding = positional_encoding(maximum_position_encoding, self.d_model, T=T)
 
-        self.enc_layers = [EncoderLayer(d_model, num_heads, dff, rate)
-                           for _ in range(num_layers)]
+        encoder_layers = [EncoderLayer(d_model, num_heads, dff, rate)
+                          for _ in range(num_layers)]
+        self.encoder = tf.keras.Sequential(encoder_layers)
 
         self.dropout = tf.keras.layers.Dropout(rate)
 
-        self.lnorm_out = tf.keras.layers.LayerNormalization() if layer_norm else None
 
     def call(self, x, training=None, mask=None):
         seq_len = tf.shape(x)[1]
@@ -173,14 +175,15 @@ class Encoder(tf.keras.layers.Layer):
             x = self.lnorm_in(x)
 
         # adding embedding and position encoding.
-        x = self.conv1d(x)  # (batch_size, input_seq_len, d_model)
-        x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
+        x = self.conv_in(x)  # (batch_size, input_seq_len, d_model)
+        if self.lnorm_conv:
+            x = self.lnorm_conv(x)
+
         x += self.pos_encoding[:, :seq_len, :]
 
         x = self.dropout(x, training=training)
 
-        for i in range(self.num_layers):
-            x = self.enc_layers[i](x, training, mask)
+        x = self.encoder(x)
 
         if self.lnorm_out:
             x = self.lnorm_out(x)
