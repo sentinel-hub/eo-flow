@@ -19,7 +19,7 @@
             "pool_time": false,
             "single_encoding_conv": true,
             "conv_size_reduce": 3,
-            "loss": "cross-entropy"
+            "loss": "cross_entropy"
         }
     },
     "task": {
@@ -34,13 +34,11 @@
                     "output_shape": [128, 128],
                     "num_classes": 2,
                     "batch_size": 1,
-                    "batches_per_epoch": 1000
+                    "batches_per_epoch": 100
                 }
             },
             "save_steps": 100,
-            "summary_steps": 50,
-            "progress_steps": 1
+            "summary_steps": 50
         }
     }
   }
-  

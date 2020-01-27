@@ -6,15 +6,15 @@ from marshmallow.validate import OneOf
 from eolearn.core import EOPatch, FeatureType
 
 from ..base import BaseInput
-from .operations import extract_subpatches, augment_data, cache_dataset
 
 _valid_types = [t.value for t in FeatureType]
+
 
 def eopatch_dataset(root_dir_or_list, features_data, fill_na=None):
     """ Creates a tf dataset with features from saved EOPatches.
 
-    :param data_dir_or_list: Root directory containing eopatches or a list of eopatch directories.
-    :type data_dir_or_list: str or list(str)
+    :param root_dir_or_list: Root directory containing eopatches or a list of eopatch directories.
+    :type root_dir_or_list: str or list(str)
     :param features_data: List of tuples containing data about features to extract.
         Tuple structure: (feature_type, feature_name, out_feature_name, feature_dtype, feature_shape)
     :type features_data: (str, str, str, np.dtype, tuple)
@@ -31,7 +31,7 @@ def eopatch_dataset(root_dir_or_list, features_data, fill_na=None):
     def _read_patch(path):
         """ TF op for reading an eopatch at a given path. """
         def _func(path):
-            path = path.decode('utf-8')
+            path = path.numpy().decode('utf-8')
 
             # Load only relevant features
             features = [(data[0], data[1]) for data in features_data]
@@ -49,7 +49,7 @@ def eopatch_dataset(root_dir_or_list, features_data, fill_na=None):
             return data
 
         out_types = [tf.as_dtype(data[3]) for data in features_data]
-        data = tf.py_func(_func, [path], out_types)
+        data = tf.py_function(_func, [path], out_types)
 
         out_data = {}
         for f_data, feature in zip(features_data, data):
@@ -64,8 +64,8 @@ def eopatch_dataset(root_dir_or_list, features_data, fill_na=None):
 
 
 class EOPatchSegmentationInput(BaseInput):
-    """ An input method for basic EOPatch reading. Reads features and segmentation labels. For more complex behaviour 
-        (subpatch extraction, data augmentation, caching, ...) create your own input method (see examples). 
+    """ An input method for basic EOPatch reading. Reads features and segmentation labels. For more complex behaviour
+        (subpatch extraction, data augmentation, caching, ...) create your own input method (see examples).
     """
 
     class _Schema(Schema):
@@ -87,7 +87,7 @@ class EOPatchSegmentationInput(BaseInput):
         num_classes = fields.Int(description="Number of classes. Used for one-hot encoding.", required=True, example=2)
 
     def _parse_shape(self, shape):
-        shape = [None if s<0 else s for s in shape]
+        shape = [None if s < 0 else s for s in shape]
         return shape
 
     def get_dataset(self):

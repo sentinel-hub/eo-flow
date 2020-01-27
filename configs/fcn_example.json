@@ -15,7 +15,9 @@
             "bias_init": 0.0,
             "padding": "VALID",
             "pool_size": 2,
-            "pool_stride": 2
+            "pool_stride": 2,
+            "loss": "focal_loss",
+            "metrics": ["accuracy"]
         }
     },
     "task": {
@@ -30,13 +32,11 @@
                     "output_shape": [128, 128],
                     "num_classes": 3,
                     "batch_size": 2,
-                    "batches_per_epoch": 1000
+                    "batches_per_epoch": 200
                 }
             },
             "save_steps": 100,
-            "summary_steps": 50,
-            "progress_steps": 1
+            "summary_steps": 50
         }
     }
   }
-  

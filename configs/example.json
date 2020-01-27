@@ -4,7 +4,7 @@
         "config": {
             "output_size": 10,
             "hidden_units": 256,
-            "learning_rate": 0.01
+            "learning_rate": 0.001
         }
     },
     "task": {
@@ -18,13 +18,12 @@
                     "input_shape": [512],
                     "num_classes": 10,
                     "batch_size": 20,
-                    "batches_per_epoch": 1000
+                    "batches_per_epoch": 200
                 }
             },
+            "iterations_per_epoch": 200,
             "save_steps": 400,
-            "summary_steps": 50,
-            "progress_steps": 100
+            "summary_steps": 50
         }
     }
   }
-  

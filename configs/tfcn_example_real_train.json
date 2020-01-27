@@ -13,25 +13,27 @@
             "add_dropout": true,
             "add_batch_norm": false,
             "bias_init": 0.0,
-            "padding": "VALID",
+            "padding": "SAME",
             "pool_size": 2,
             "pool_stride": 2,
             "pool_time": false,
             "single_encoding_conv": true,
             "conv_size_reduce": 3,
-            "loss": "cross-entropy",
-            "image_summaries": true
+            "loss": "focal_loss",
+            "metrics": ["accuracy", "iou"],
+            "prediction_visualization": true
         }
     },
     "task": {
         "classname": "eoflow.tasks.TrainTask",
         "config": {
-            "num_epochs": 5,
+            "num_epochs": 50,
+            "iterations_per_epoch": 10,
             "model_directory": "./temp/tfcn_svn_lulc",
             "input_config":{
                 "classname": "examples.input.EOPatchInputExample",
                 "config": {
-                    "data_dir": "/storage/jupyter/data/svn_lulc/data/train-val-linear-v01-aws/train",
+                    "data_dir": "/home/devis/Desktop/train-val-linear-v01-aws/train",
                     "input_feature_type": "data",
                     "input_feature_name": "FEATURES",
                     "input_feature_axis": [1,2],
@@ -42,16 +44,15 @@
                     "labels_feature_shape": [-1, -1, 1],
                     "patch_size": [128, 128],
                     "interleave_size": 3,
-                    "batch_size": 5,
+                    "batch_size": 2,
                     "num_classes": 10,
                     "cache_file": "./temp/tfcn_svn_lulc/dataset/cache",
-                    "num_subpatches": 5
+                    "num_subpatches": 5,
+                    "data_augmentation": true
                 }
             },
             "save_steps": 100,
-            "summary_steps": 10,
-            "progress_steps": 1
+            "summary_steps": 1
         }
     }
   }
-  

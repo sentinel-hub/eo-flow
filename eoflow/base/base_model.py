@@ -1,275 +1,134 @@
-import logging
 import os
-from enum import Enum
 
-from tqdm.auto import tqdm
 import tensorflow as tf
 
 from . import Configurable
-from ..utils import create_dirs, get_common_shape
 
-class ModelHeads():
-    TRAIN = 1
-    EVALUATE = 2
-    PREDICT = 3
 
-    class TrainHead:
-        def __init__(self, train_op, loss_op, summaries_op):
-            self.train_op = train_op
-            self.loss_op = loss_op
-            self.summaries_op = summaries_op
-
-    class EvaluateHead:
-        def __init__(self, metric_init_op, metric_update_op, metric_summaries_op, metric_values_op_dict):
-            self.metric_init_op = metric_init_op
-            self.metric_update_op = metric_update_op
-            self.metric_summaries_op = metric_summaries_op
-            self.metric_values_op_dict = metric_values_op_dict
-
-    class PredictHead:
-        def __init__(self, prediction_op):
-            self.prediction_op = prediction_op
-
-class BaseModel(Configurable):
-
-    METRICS_NAME_SCOPE = 'metrics'
-
+class BaseModel(tf.keras.Model, Configurable):
     def __init__(self, config_specs):
-        super().__init__(config_specs)
+        tf.keras.Model.__init__(self)
+        Configurable.__init__(self, config_specs)
 
-        self.training_summaries = []
-        self.validation_summaries = []
-        self.validation_metrics = []
+        self.net = None
 
-    def init_global_step(self):
-        """ Initializes a tensorflow variable to use it as global step counter. """
+        self.init_model()
 
-        # DON'T forget to add the global step tensor to the tensorflow trainer
-        with tf.variable_scope('global_step'):
-            self.global_step_tensor = tf.Variable(0, trainable=False, name='global_step')
+    def init_model(self):
+        """ Called on __init__. Keras model initialization. Create model here if does not require the inputs shape """
+        pass
 
-    def clear_graph(self):
-        """ Clears the graph and collections of operations. """
+    def build(self, inputs_shape):
+        """ Keras method. Called once to build the model. Build the model here if the input shape is required. """
+        pass
 
-        tf.reset_default_graph()
-        self.training_summaries = []
-        self.validation_summaries = []
-        self.validation_metrics = []
+    def call(self, inputs, training=False):
+        """ Runs the model with inputs. """
+        pass
 
-    def add_training_summary(self, summary):
-        """Adds a summary to the list of recorded summaries."""
+    def prepare(self, optimizer=None, loss=None, metrics=None, **kwargs):
+        """ Prepares the model for training and evaluation. This method should create the
+        optimizer, loss and metric functions and call the compile method of the model. The model
+        should provide the defaults for the optimizer, loss and metrics, which can be overriden
+        with custom arguments. """
 
-        self.training_summaries.append(summary)
-
-    def add_validation_metric(self, metric_fn, name):
-        """Adds a summary to the list of recorded summaries."""
-
-        with tf.name_scope(self.METRICS_NAME_SCOPE):
-            metric_val, metric_update_op = metric_fn()
-
-        # Add metric to the list
-        self.validation_metrics.append((name, metric_val, metric_update_op))
-
-        # Create summary and add it to the list
-        summary = tf.summary.scalar(name, metric_val)
-        self.validation_summaries.append(summary)
-
-    def get_merged_training_summaries(self):
-        """Merges all the specified summaries and returns the merged summary tensor."""
-
-        if len(self.training_summaries) > 0:
-            return tf.summary.merge(self.training_summaries)
-        else:
-            return tf.constant("")
-
-    def get_merged_validation_ops(self):
-        """ Prepares all the needed ops for performing validation. Init, update, summary and metric value ops. """
-
-        # Metric initializer op (reset counters)
-        variables = tf.get_collection(tf.GraphKeys.LOCAL_VARIABLES, scope=self.METRICS_NAME_SCOPE)
-        init_op = tf.variables_initializer(variables, 'validation_init')
-
-        # Merge update ops into a single op
-        update_ops = [update_op for name, value_op, update_op in self.validation_metrics]
-        merged_update_op = tf.group(*update_ops)
-
-        # Merge summaries
-        if len(self.validation_summaries) > 0:
-            summary_op = tf.summary.merge(self.validation_summaries)
-        else:
-            summary_op = tf.constant("")
-
-        # Dict of value ops
-        value_ops = {name:value_op for name, value_op, update_op in self.validation_metrics}
-
-
-        return init_op, merged_update_op, summary_op, value_ops
-
-    def build_model(self, features, labels, is_train_tensor, model_heads):
-        """Builds the model for the provided input features and labels.
-
-        :param features: Input features tensor. Can be a single tensor or a dict of tensors.
-        :type features: tf.tensor | dict(str, tf.tensor)
-        :param labels: Labels tensor. Can be a single tensor or a dict of tensors.
-        :type labels: tf.tensor | dict(str, tf.tensor)
-        :param model_heads: List of model heads to build and return
-        :type mode: list(ModelHeads)
-        :param is_train_tensor: bool tensor specifying the mode of the network (training or predicting).
-        :type is_train_tensor: tf.Tensor
-        """
         raise NotImplementedError
 
-    def train(self, dataset_fn, num_epochs, model_directory, save_steps=100, summary_steps=10, progress_steps=10):
+    def load_latest(self, model_directory):
+        """ Loads weights from the latest checkpoint in the model directory. """
+
+        checkpoints_path = os.path.join(model_directory, 'checkpoints', 'model.ckpt')
+
+        return self.load_weights(checkpoints_path).expect_partial()
+
+    def _fit(self,
+             dataset,
+             num_epochs,
+             model_directory,
+             iterations_per_epoch,
+             val_dataset=None,
+             save_steps=100,
+             summary_steps='epoch',
+             callbacks=[],
+             **kwargs):
+        """ Trains and evaluates the model on a given dataset, saving the model and recording summaries. """
+        logs_path = os.path.join(model_directory, 'logs')
+        checkpoints_path = os.path.join(model_directory, 'checkpoints', 'model.ckpt')
+
+        # Tensorboard callback
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logs_path,
+                                                              update_freq=summary_steps,
+                                                              profile_batch=0)
+
+        # Checkpoint saving callback
+        checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(checkpoints_path,
+                                                                 save_freq=save_steps,
+                                                                 save_weights_only=True)
+        return self.fit(dataset,
+                        validation_data=val_dataset,
+                        epochs=num_epochs,
+                        steps_per_epoch=iterations_per_epoch,
+                        callbacks=[tensorboard_callback, checkpoint_callback] + callbacks,
+                        **kwargs)
+
+    def train(self,
+              dataset,
+              num_epochs,
+              model_directory,
+              iterations_per_epoch=None,
+              save_steps=100,
+              summary_steps='epoch',
+              callbacks=[],
+              **kwargs):
         """ Trains the model on a given dataset. Takes care of saving the model and recording summaries.
 
-        :param dataset_fn: A function that builds and returns a tf.data.Dataset containing the input training data.
+        :param dataset: A tf.data Dataset containing the input training data.
             The dataset must be of shape (features, labels) where features and labels contain the data
             in the shape required by the model.
-        :type dataset_fn: function
-        :param num_epochs: Number of epochs.
+        :type dataset: tf.data.Dataset
+        :param num_epochs: Number of epochs. One epoch is equal to one pass over the dataset.
         :type num_epochs: int
         :param model_directory: Output directory, where the model checkpoints and summaries are saved.
         :type model_directory: str
+        :param iterations_per_epoch: Number of training steps to make every epoch.
+            Training dataset is repeated automatically when the end is reached.
+        :type iterations_per_epoch: int
         :param save_steps: Number of steps between saving model checkpoints.
         :type save_steps: int
-        :param summary_steps: Number of steps between recodring summaries.
-        :type summary_steps: int
-        :param progress_steps: Number of steps between outputing progress to stdout.
-        :type progress_steps: int
+        :param summary_steps: Number of steps between recording summaries.
+        :type summary_steps: str or int
+        :param callbacks: Customised Keras callbacks to use during training/evaluation
+        :type callbacks: tf.keras.callbacks
+
+        Other keyword parameters are passed to the Model.fit method.
         """
 
-        # Clear graph
-        self.clear_graph()
+        return self._fit(dataset if iterations_per_epoch is None else dataset.repeat(),
+                         num_epochs=num_epochs,
+                         model_directory=model_directory,
+                         iterations_per_epoch=iterations_per_epoch,
+                         save_steps=save_steps,
+                         summary_steps=summary_steps,
+                         callbacks=callbacks,
+                         **kwargs)
 
-        with tf.Session() as sess:
-            # Build the dataset
-            dataset = dataset_fn()
-            iterator = dataset.make_initializable_iterator()
-            features, labels = iterator.get_next()
-
-            # Build model
-            self.init_global_step()
-            is_train_tensor = tf.constant(True)
-            train_head = self.build_model(features, labels, is_train_tensor, [ModelHeads.TRAIN])[0]
-
-            # Create saver
-            step_tensor = self.global_step_tensor
-            checkpoint_dir = os.path.join(model_directory, 'checkpoints')
-            create_dirs([checkpoint_dir])
-            checkpoint_path = os.path.join(checkpoint_dir, 'model.ckpt')
-            saver = tf.train.Saver()
-
-            # Restore latest checkpoint if it exits
-            checkpoint_file = tf.train.latest_checkpoint(checkpoint_dir)
-            if checkpoint_file is not None:
-                print("Restoring checkpoint: %s" % checkpoint_file)
-                saver.restore(sess, checkpoint_file)
-
-            # Create summary writer
-            create_dirs([checkpoint_dir])
-            summary_writer = tf.summary.FileWriter(model_directory, sess.graph)
-
-            # Initialize variables
-            initializer = tf.global_variables_initializer()
-            sess.run(initializer)
-
-            # Train
-            try:
-                training_step = 1
-                for e in tqdm(range(num_epochs), total=num_epochs):
-                    sess.run(iterator.initializer)
-
-                    while True:
-                        try:
-                            # Compute and record summaries every summary_steps
-                            if training_step % summary_steps == 0:
-                                _, loss, step, summaries = sess.run([train_head.train_op, train_head.loss_op, step_tensor, train_head.summaries_op])
-
-                                summary_writer.add_summary(summaries, global_step=step)
-                            else:
-                                _, loss, step = sess.run([train_head.train_op, train_head.loss_op, step_tensor])
-
-                            # Show progress
-                            if training_step % progress_steps == 0:
-                                tqdm.write("Step %d: %f" % (step, loss))
-
-                            # Model saving
-                            if training_step % save_steps == 0:
-                                tqdm.write("Saving checkpoint at step %d." % step)
-                                saver.save(sess, checkpoint_path, global_step=step)
-
-                            training_step += 1
-                        except tf.errors.OutOfRangeError:
-                            break
-
-            # Catch user interrupt
-            except KeyboardInterrupt:
-                print("Training interrupted by user.")
-
-            # Save at the end of training
-            print("Saving checkpoint at step %d." % step)
-            saver.save(sess, checkpoint_path, global_step=step)
-
-    def evaluate(self, dataset_fn, model_directory):
-        """ Runs the evaluation on the model with the provided dataset
-
-        :param dataset_fn: A function that builds and returns a tf.data.Dataset containing the input data.
-        :type dataset_fn: function
-        :param model_directory: Model directory that was used in training.
-        :type model_directory: str
-
-        :return: Values of the metrics. Structure of metrics is defined by the model.
-        """
-
-        # Clear graph
-        self.clear_graph()
-
-        with tf.Session() as sess:
-            # Build the dataset
-            dataset = dataset_fn()
-            iterator = dataset.make_one_shot_iterator()
-            features, labels = iterator.get_next()
-
-            # Build model
-            self.init_global_step()
-            is_train_tensor = tf.constant(False)
-            eval_head = self.build_model(features, labels, is_train_tensor, [ModelHeads.EVALUATE])[0]
-
-            # Restore latest checkpoint
-            checkpoint_dir = os.path.join(model_directory, 'checkpoints')
-            checkpoint_file = tf.train.latest_checkpoint(checkpoint_dir)
-            if checkpoint_file is None:
-                raise ValueError("No checkpoints found in the model directory.")
-
-            print("Restoring checkpoint: %s" % checkpoint_file)
-            saver = tf.train.Saver()
-            saver.restore(sess, checkpoint_file)
-
-            # Initialize metrics
-            sess.run(eval_head.metric_init_op)
-            while True:
-                try:
-                    sess.run(eval_head.metric_update_op)
-                except tf.errors.OutOfRangeError:
-                    break
-
-            # Run metric value ops
-            metrics = sess.run(eval_head.metric_values_op_dict)
-
-            return metrics
-
-    def train_and_evaluate(self, train_dataset_fn, val_dataset_fn, num_epochs, iterations_per_epoch, model_directory,
-                           save_steps=100, summary_steps=10, progress_steps=10):
+    def train_and_evaluate(self,
+                           train_dataset,
+                           val_dataset,
+                           num_epochs,
+                           iterations_per_epoch,
+                           model_directory,
+                           save_steps=100, summary_steps='epoch', callbacks=[], **kwargs):
         """ Trains the model on a given dataset. At the end of each epoch an evaluation is performed on the provided
             validation dataset. Takes care of saving the model and recording summaries.
 
-        :param train_dataset_fn: A function that builds and returns a tf.data.Dataset containing the input training data.
+        :param train_dataset: A tf.data Dataset containing the input training data.
             The dataset must be of shape (features, labels) where features and labels contain the data
             in the shape required by the model.
-        :type train_dataset_fn: function
-        :param val_dataset_fn: Same as for `train_dataset_fn`, but for the validation data.
-        :type val_dataset_fn: function
-        :param num_epochs: Number of epochs.
+        :type train_dataset: tf.data.Dataset
+        :param val_dataset: Same as for `train_dataset`, but for the validation data.
+        :type val_dataset: tf.data.Dataset
+        :param num_epochs: Number of epochs. Epoch size is independent from the dataset size.
         :type num_epochs: int
         :param iterations_per_epoch: Number of training steps to make every epoch.
             Training dataset is repeated automatically when the end is reached.
@@ -279,157 +138,18 @@ class BaseModel(Configurable):
         :param save_steps: Number of steps between saving model checkpoints.
         :type save_steps: int
         :param summary_steps: Number of steps between recodring summaries.
-        :type summary_steps: int
-        :param progress_steps: Number of steps between outputing progress to stdout.
-        :type progress_steps: int
+        :type summary_steps: str or int
+        :param callbacks: Customised Keras callbacks to use during training/evaluation
+        :type callbacks: tf.keras.callbacks
+
+        Other keyword parameters are passed to the Model.fit method.
         """
-
-        # Clear graph
-        self.clear_graph()
-
-        with tf.Session() as sess:
-            # Build the datasets
-            train_dataset = train_dataset_fn().repeat()
-            val_dataset = val_dataset_fn()
-
-            # Get common shape of the datasets (they may differ in batch size, etc.)
-            shapes_train = [shape.as_list() for shape in train_dataset.output_shapes]
-            shapes_val = [shape.as_list() for shape in val_dataset.output_shapes]
-
-            common_shapes = tuple(get_common_shape(shape1, shape2) for shape1, shape2 in zip(shapes_train, shapes_val))
-
-            # Dataset selector placeholder
-            handle = tf.placeholder(tf.string, shape=[])
-
-            # Switchable iterator (can switch between train and val)
-            iterator = tf.data.Iterator.from_string_handle(
-                        handle, train_dataset.output_types, common_shapes)
-            features, labels = iterator.get_next()
-
-            # Get dataset iterators
-            train_iterator = train_dataset.make_one_shot_iterator()
-            val_iterator = val_dataset.make_initializable_iterator()
-
-            # Get handles to select which dataset iterator to use
-            train_handle = sess.run(train_iterator.string_handle())
-            val_handle = sess.run(val_iterator.string_handle())
-
-            # Build model
-            self.init_global_step()
-            is_train = tf.placeholder(tf.bool, shape=(), name='is_train')
-            train_head, eval_head = self.build_model(features, labels, is_train, [ModelHeads.TRAIN, ModelHeads.EVALUATE])
-
-            # Create saver
-            step_tensor = self.global_step_tensor
-            checkpoint_dir = os.path.join(model_directory, 'checkpoints')
-            create_dirs([checkpoint_dir])
-            checkpoint_path = os.path.join(checkpoint_dir, 'model.ckpt')
-            saver = tf.train.Saver()
-
-            # Restore latest checkpoint if it exits
-            checkpoint_file = tf.train.latest_checkpoint(checkpoint_dir)
-            if checkpoint_file is not None:
-                print("Restoring checkpoint: %s" % checkpoint_file)
-                saver.restore(sess, checkpoint_file)
-
-            # Create summary writer
-            create_dirs([checkpoint_dir])
-            train_summary_writer = tf.summary.FileWriter(os.path.join(model_directory, 'train'), sess.graph)
-            val_summary_writer = tf.summary.FileWriter(os.path.join(model_directory, 'val'))
-
-            # Initialize variables
-            initializer = tf.global_variables_initializer()
-            sess.run(initializer)
-
-            # Train
-            try:
-                training_step = 1
-                for e in tqdm(range(num_epochs), desc='Training'):
-
-                    # Train for iterations_per_epoch steps
-                    for _ in tqdm(range(iterations_per_epoch), desc="Epoch %d" % (e+1), leave=False):
-                        # Compute and record summaries every summary_steps
-                        if training_step % summary_steps == 0:
-                            _, loss, step, summaries = sess.run([train_head.train_op, train_head.loss_op, step_tensor, train_head.summaries_op], {handle: train_handle, is_train: True})
-
-                            train_summary_writer.add_summary(summaries, global_step=step)
-                        else:
-                            _, loss, step = sess.run([train_head.train_op, train_head.loss_op, step_tensor], {handle: train_handle, is_train: True})
-
-                        # Show progress
-                        if training_step % progress_steps == 0:
-                            tqdm.write("Step %d: %f" % (step, loss))
-
-                        # Model saving
-                        if training_step % save_steps == 0:
-                            tqdm.write("Saving checkpoint at step %d." % step)
-                            saver.save(sess, checkpoint_path, global_step=step)
-
-                        training_step += 1
-
-                    # Evaluate at the end of each epoch
-                    tqdm.write('Evaluating...')
-                    sess.run(val_iterator.initializer)
-                    sess.run(eval_head.metric_init_op)
-                    while True:
-                        try:
-                            sess.run(eval_head.metric_update_op, {handle: val_handle, is_train: False})
-                        except tf.errors.OutOfRangeError:
-                            break
-                    val_summaries, val_values = sess.run([eval_head.metric_summaries_op, eval_head.metric_values_op_dict])
-                    tqdm.write('Evaluation results: %s' % str(val_values))
-                    val_summary_writer.add_summary(val_summaries, global_step=step)
-
-            # Catch user interrupt
-            except KeyboardInterrupt:
-                print("Training interrupted by user.")
-
-            # Save at the end of training
-            print("Saving checkpoint at step %d." % step)
-            saver.save(sess, checkpoint_path, global_step=step)
-
-    def predict(self, dataset_fn, model_directory):
-        """ Runs the prediction on the model with the provided dataset
-
-        :param dataset_fn: A function that builds and returns a tf.data.Dataset containing the input data.
-        :type dataset_fn: function
-        :param model_directory: Model directory that was used in training.
-        :type model_directory: str
-
-        :return: List of predictions. Structure of predictions is defined by the model.
-        :rtype: list
-        """
-        # Clear graph
-        self.clear_graph()
-
-        with tf.Session() as sess:
-            # Build the dataset
-            dataset = dataset_fn()
-            iterator = dataset.make_one_shot_iterator()
-            features, labels = iterator.get_next()
-
-            # Build model
-            self.init_global_step()
-            is_train_tensor = tf.constant(False)
-            predict_head = self.build_model(features, labels, is_train_tensor, [ModelHeads.PREDICT])[0]
-
-            # Restore latest checkpoint
-            checkpoint_dir = os.path.join(model_directory, 'checkpoints')
-            checkpoint_file = tf.train.latest_checkpoint(checkpoint_dir)
-            if checkpoint_file is None:
-                raise ValueError("No checkpoints found in the model directory.")
-
-            print("Restoring checkpoint: %s" % checkpoint_file)
-            saver = tf.train.Saver()
-            saver.restore(sess, checkpoint_file)
-
-            # Predict
-            predictions_list = []
-            while True:
-                try:
-                    predictions = sess.run(predict_head.prediction_op)
-                    predictions_list.append(predictions)
-                except tf.errors.OutOfRangeError:
-                    break
-
-            return predictions_list
+        return self._fit(train_dataset.repeat(),
+                         num_epochs,
+                         model_directory,
+                         iterations_per_epoch,
+                         val_dataset=val_dataset,
+                         save_steps=save_steps,
+                         summary_steps=summary_steps,
+                         callbacks=callbacks,
+                         **kwargs)

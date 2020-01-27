@@ -1,8 +1,10 @@
 from abc import ABC
 import inspect
+import json
+
 from marshmallow import Schema, fields
 from munch import Munch
-import json
+
 
 def dict_to_munch(obj):
     """ Recursively convert a dict to Munch. (there is a Munch.from_dict method, but it's not python3 compatible)
@@ -29,7 +31,7 @@ class Configurable(ABC):
 
     @classmethod
     def initialize_schema(cls):
-        """ A Schema should be provided as an internal class of any class that inherits from Configurable. 
+        """ A Schema should be provided as an internal class of any class that inherits from Configurable.
         This method finds the Schema by traversing the inheritance tree. If no Schema is provided or inherited
         an error is raised.
         """
@@ -58,6 +60,9 @@ class Configurable(ABC):
                 config_specs = json.load(config_file)
 
         return Config(self.schema.load(config_specs))
+
+    def show_config(self):
+        print(json.dumps(self.config, indent=4))
 
 
 class Config(Munch):
