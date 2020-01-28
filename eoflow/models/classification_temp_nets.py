@@ -83,7 +83,7 @@ class TCNModel(BaseClassificationModel):
                 skip_connections.append(skip_out)
 
         # Author: @karolbadowski.
-        output_slice_index = int(net.output_shape.as_list()[1] / 2) \
+        output_slice_index = int(net.shape.as_list()[1] / 2) \
             if self.config.padding.lower() == 'same' else -1
         lambda_layer = tf.keras.layers.Lambda(lambda tt: tt[:, output_slice_index, :])
 
@@ -200,10 +200,8 @@ class BiRNN(BaseClassificationModel):
         kernel_initializer = fields.Str(missing='he_normal', description='Method to initialise kernel parameters.')
         kernel_regularizer = fields.Float(missing=1e-6, description='L2 regularization parameter.')
 
-
     def _rnn_layer(self, last=False):
         """ Returns a RNN layer for current configuration. Use `last=True` for the last RNN layer. """
-
         RNNLayer = rnn_layers[self.config.rnn_layer]
         dropout_rate = 1 - self.config.keep_prob
 
