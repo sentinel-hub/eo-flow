@@ -1,8 +1,8 @@
 # EOFlow
 
-This repository provides code and examples for creation of Earth Observation (EO) projects using TensorFlow. The code is based on TensorFlow 2.0 with Keras as the main model building API.
+This repository provides code and examples for creation of Earth Observation (EO) projects using TensorFlow. The code uses TensorFlow 2.0 with Keras as the main model building API.
 
-Common model architectures, layers, and input methods for EO tasks are provided in the package `eoflow`. Custom models and input methods can also be implemented building on top of the provided abstract classes. This package aims at seamlessly integrate with [`eo-learn`](https://github.com/sentinel-hub/eo-learn), and favours both creation of models for prototypying as well as production of EO applciations.
+Common model architectures, layers, and input methods for EO tasks are provided in the package `eoflow`. Custom models and input methods can also be implemented building on top of the provided abstract classes. This package aims at seamlessly integrate with [`eo-learn`](https://github.com/sentinel-hub/eo-learn), and favours both creation of models for prototypying as well as production of EO applications.
 
 Architectures and examples for land cover and crop classification using time-series derived from satellite images are provided.
 
