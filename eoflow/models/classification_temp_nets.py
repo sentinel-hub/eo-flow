@@ -226,7 +226,7 @@ class BiRNN(BaseClassificationModel):
             layers.append(layer_norm)
 
         # RNN layers
-        layers.append([self._rnn_layer() for _ in range(self.config.rnn_blocks-1)])
+        layers.extend([self._rnn_layer() for _ in range(self.config.rnn_blocks-1)])
         layers.append(self._rnn_layer(last=True))
 
         if self.config.batch_norm:
