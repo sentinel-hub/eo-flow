@@ -200,6 +200,9 @@ class BiRNN(BaseClassificationModel):
         kernel_initializer = fields.Str(missing='he_normal', description='Method to initialise kernel parameters.')
         kernel_regularizer = fields.Float(missing=1e-6, description='L2 regularization parameter.')
 
+        layer_norm = fields.Bool(missing=True, description='Whether to apply layer normalization in the encoder.')
+        batch_norm = fields.Bool(missing=False, description='Whether to use batch normalisation.')
+
     def _rnn_layer(self, last=False):
         """ Returns a RNN layer for current configuration. Use `last=True` for the last RNN layer. """
         RNNLayer = rnn_layers[self.config.rnn_layer]
@@ -217,10 +220,22 @@ class BiRNN(BaseClassificationModel):
 
     def init_model(self):
         """ Creates the RNN model architecture. """
+        layers = []
+        if self.config.layer_norm:
+            layer_norm = tf.keras.layers.LayerNormalization()
+            layers.append(layer_norm)
 
         # RNN layers
-        layers = [self._rnn_layer() for _ in range(self.config.rnn_blocks-1)]
+        layers.append([self._rnn_layer() for _ in range(self.config.rnn_blocks-1)])
         layers.append(self._rnn_layer(last=True))
+
+        if self.config.batch_norm:
+            batch_norm = tf.keras.layers.BatchNormalization()
+            layers.append(batch_norm)
+
+        if self.config.layer_norm:
+            layer_norm = tf.keras.layers.LayerNormalization()
+            layers.append(layer_norm)
 
         dense = tf.keras.layers.Dense(units=self.config.n_classes,
                                       activation=self.config.activation,
