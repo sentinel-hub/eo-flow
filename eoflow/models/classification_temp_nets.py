@@ -319,7 +319,7 @@ class PseTae(BaseClassificationModel):
         dropout = fields.Float(missing=0.2, description='Dropout rate for attention encoder.')
         T = fields.Float(missing=1000, description='Number of features for attention.')
         len_max_seq = fields.Int(missing=24, description='Number of features for attention.')
-        mlp4 = fields.List(fields.Int, missing=[128, 64, 32, 20], description='Number of units for each layer in mlp4.')
+        mlp4 = fields.List(fields.Int, missing=[128, 64, 32], description='Number of units for each layer in mlp4. Last layer with n_classes is added automatically.')
 
     def init_model(self):
         # TODO: spatial encoder extras
@@ -340,8 +340,10 @@ class PseTae(BaseClassificationModel):
             T=self.config.T,
             len_max_seq=self.config.len_max_seq)
 
-        mlp4_layers = [pse_tae_layers.LinearLayer(out_dim) for out_dim in self.config.mlp4[:-1]]
-        mlp4_layers.append(pse_tae_layers.LinearLayer(self.config.mlp4[-1], batch_norm=False, activation=False))
+        mlp4_layers = [pse_tae_layers.LinearLayer(out_dim) for out_dim in self.config.mlp4]
+        # Final layer (logits)
+        mlp4_layers.append(pse_tae_layers.LinearLayer(self.config.n_classes, batch_norm=False, activation=False))
+
         self.mlp4 = tf.keras.Sequential(mlp4_layers)
 
     def call(self, inputs, training=None, mask=None):
