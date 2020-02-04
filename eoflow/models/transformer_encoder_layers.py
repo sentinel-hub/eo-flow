@@ -174,15 +174,15 @@ class Encoder(tf.keras.layers.Layer):
             x = self.lnorm_in(x)
 
         # adding embedding and position encoding.
-        x = self.conv_in(x)  # (batch_size, input_seq_len, d_model)
+        x = self.conv_in(x, training=training)  # (batch_size, input_seq_len, d_model)
+        if self.lnorm_conv:
+            x = self.lnorm_conv(x)
+
         x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
         x += self.pos_encoding[:, :seq_len, :]
 
         x = self.dropout(x, training=training)
 
-        if self.lnorm_out:
-            x = self.lnorm_conv(x)
-
-        x = self.encoder(x)
+        x = self.encoder(x, training=training, mask=mask)
 
         return x  # (batch_size, input_seq_len, d_model)
