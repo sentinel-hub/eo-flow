@@ -323,8 +323,6 @@ class PseTae(BaseClassificationModel):
 
     def init_model(self):
         # TODO: spatial encoder extras
-        # TODO: spatial encoder custom times
-        # TODO: temporal encoder unspecified d_model
 
         self.spatial_encoder = pse_tae_layers.PixelSetEncoder(
             mlp1=self.config.mlp1,

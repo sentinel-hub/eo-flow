@@ -52,8 +52,6 @@ class MultiHeadAttention(tf.keras.layers.Layer):
             L.Dense(d_k)
         ])
 
-        self.attention = None # TODO
-
     def split_heads(self, x, batch_size):
         """Split the last dimension into (n_head, d_k).
         Transpose the result such that the shape is (batch_size, n_head, seq_len, d_k)
