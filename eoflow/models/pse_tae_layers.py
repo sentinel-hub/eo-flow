@@ -78,12 +78,10 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
         output, attn = scaled_dot_product_attention(q, k, v, mask)
 
-        # (batch_size, seq_len_q, num_heads, depth)
-        output = tf.transpose(output, perm=[0, 2, 1, 3])
+        output = tf.squeeze(output, axis=2)
 
-        # (batch_size, seq_len_q, d_model)
-        output = tf.reshape(output, (batch_size, -1, self.d_k * self.n_head))
-        output = tf.squeeze(output, axis=1)
+        # Concat heads
+        output = tf.reshape(output, (batch_size, -1))
 
         return output
 
