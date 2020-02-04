@@ -107,7 +107,7 @@ def positional_encoding(position, d_model, T=10000):
 
     angle_rads = _get_angles(np.arange(position)[:, np.newaxis],
                             np.arange(d_model)[np.newaxis, :],
-                            d_model, T=T)
+                            d_model)
 
     # apply sin to even indices in the array; 2i
     angle_rads[:, 0::2] = np.sin(angle_rads[:, 0::2])
@@ -121,10 +121,10 @@ def positional_encoding(position, d_model, T=10000):
 
 
 class EncoderLayer(tf.keras.layers.Layer):
-    def __init__(self, d_model, num_heads, dff, rate=0.1, multi_head_attention=MultiHeadAttention):
+    def __init__(self, d_model, num_heads, dff, rate=0.1):
         super(EncoderLayer, self).__init__()
 
-        self.mha = multi_head_attention(d_model, num_heads)
+        self.mha = MultiHeadAttention(d_model, num_heads)
         self.ffn = point_wise_feed_forward_network(d_model, dff)
 
         self.layernorm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
@@ -146,7 +146,7 @@ class EncoderLayer(tf.keras.layers.Layer):
 
 
 class Encoder(tf.keras.layers.Layer):
-    def __init__(self, num_layers, d_model, num_heads, dff, maximum_position_encoding, rate=0.1, layer_norm=False, T=10000, multi_head_attention=MultiHeadAttention):
+    def __init__(self, num_layers, d_model, num_heads, dff, maximum_position_encoding, rate=0.1, layer_norm=False, T=10000):
         super(Encoder, self).__init__()
 
         self.d_model = d_model
@@ -154,14 +154,13 @@ class Encoder(tf.keras.layers.Layer):
 
         self.lnorm_in = tf.keras.layers.LayerNormalization() if layer_norm else None
         self.lnorm_conv = tf.keras.layers.LayerNormalization() if layer_norm else None
-        self.lnorm_out = tf.keras.layers.LayerNormalization() if layer_norm else None
 
         # replace embedding with 1d convolution
         self.conv_in = Conv1D(d_model, 1)
         # self.embedding = tf.keras.layers.Embedding(input_vocab_size, d_model)
         self.pos_encoding = positional_encoding(maximum_position_encoding, self.d_model, T=T)
 
-        encoder_layers = [EncoderLayer(d_model, num_heads, dff, rate, multi_head_attention)
+        encoder_layers = [EncoderLayer(d_model, num_heads, dff, rate)
                           for _ in range(num_layers)]
         self.encoder = tf.keras.Sequential(encoder_layers)
 
@@ -176,16 +175,14 @@ class Encoder(tf.keras.layers.Layer):
 
         # adding embedding and position encoding.
         x = self.conv_in(x)  # (batch_size, input_seq_len, d_model)
-        if self.lnorm_conv:
-            x = self.lnorm_conv(x)
-
+        x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
         x += self.pos_encoding[:, :seq_len, :]
 
         x = self.dropout(x, training=training)
 
-        x = self.encoder(x)
-
         if self.lnorm_out:
-            x = self.lnorm_out(x)
+            x = self.lnorm_conv(x)
+
+        x = self.encoder(x)
 
         return x  # (batch_size, input_seq_len, d_model)
