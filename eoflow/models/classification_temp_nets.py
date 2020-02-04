@@ -322,8 +322,9 @@ class PseTae(BaseClassificationModel):
         mlp4 = fields.List(fields.Int, missing=[128, 64, 32], description='Number of units for each layer in mlp4. Last layer with n_classes is added automatically.')
 
     def init_model(self):
-        # TODO: spatial encoder extras
-        # TODO: spatial encoder masks (time mask)
+        # TODO: missing features from original PseTae:
+        #   * spatial encoder extra features (hand-made)
+        #   * spatial encoder masking
 
         self.spatial_encoder = pse_tae_layers.PixelSetEncoder(
             mlp1=self.config.mlp1,
