@@ -99,14 +99,21 @@ def point_wise_feed_forward_network(d_model, dff):
     ])
 
 
-def get_angles(pos, i, d_model):
-    angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
-    return pos * angle_rates
+def positional_encoding(positions, d_model, T=10000):
 
+    if isinstance(positions, int):
+        positions = np.arange(positions)
+    else:
+        positions = np.array(positions)
 
-def positional_encoding(position, d_model):
-    angle_rads = get_angles(np.arange(position)[:, np.newaxis],
-                            np.arange(d_model)[np.newaxis, :],
+    def _get_angles(pos, i, d_model):
+        angle_rates = 1 / np.power(T, (2 * (i//2)) / np.float32(d_model))
+        return pos * angle_rates
+
+    depths = np.arange(d_model)
+
+    angle_rads = _get_angles(positions[:, np.newaxis],
+                            depths[np.newaxis, :],
                             d_model)
 
     # apply sin to even indices in the array; 2i
@@ -146,25 +153,26 @@ class EncoderLayer(tf.keras.layers.Layer):
 
 
 class Encoder(tf.keras.layers.Layer):
-    def __init__(self, num_layers, d_model, num_heads, dff, maximum_position_encoding, rate=0.1, layer_norm=False):
+    def __init__(self, num_layers, d_model, num_heads, dff, maximum_position_encoding, rate=0.1, layer_norm=False, T=10000):
         super(Encoder, self).__init__()
 
         self.d_model = d_model
         self.num_layers = num_layers
 
         self.lnorm_in = tf.keras.layers.LayerNormalization() if layer_norm else None
+        self.lnorm_conv = tf.keras.layers.LayerNormalization() if layer_norm else None
 
         # replace embedding with 1d convolution
-        self.conv1d = Conv1D(d_model, 1)
+        self.conv_in = Conv1D(d_model, 1)
         # self.embedding = tf.keras.layers.Embedding(input_vocab_size, d_model)
-        self.pos_encoding = positional_encoding(maximum_position_encoding, self.d_model)
+        self.pos_encoding = positional_encoding(maximum_position_encoding, self.d_model, T=T)
 
-        self.enc_layers = [EncoderLayer(d_model, num_heads, dff, rate)
-                           for _ in range(num_layers)]
+        encoder_layers = [EncoderLayer(d_model, num_heads, dff, rate)
+                          for _ in range(num_layers)]
+        self.encoder = tf.keras.Sequential(encoder_layers)
 
         self.dropout = tf.keras.layers.Dropout(rate)
 
-        self.lnorm_out = tf.keras.layers.LayerNormalization() if layer_norm else None
 
     def call(self, x, training=None, mask=None):
         seq_len = tf.shape(x)[1]
@@ -173,16 +181,15 @@ class Encoder(tf.keras.layers.Layer):
             x = self.lnorm_in(x)
 
         # adding embedding and position encoding.
-        x = self.conv1d(x)  # (batch_size, input_seq_len, d_model)
+        x = self.conv_in(x, training=training)  # (batch_size, input_seq_len, d_model)
+        if self.lnorm_conv:
+            x = self.lnorm_conv(x)
+
         x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
         x += self.pos_encoding[:, :seq_len, :]
 
         x = self.dropout(x, training=training)
 
-        if self.lnorm_out:
-            x = self.lnorm_out(x)
-
-        for i in range(self.num_layers):
-            x = self.enc_layers[i](x, training, mask)
+        x = self.encoder(x, training=training, mask=mask)
 
         return x  # (batch_size, input_seq_len, d_model)
