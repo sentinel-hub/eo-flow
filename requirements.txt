@@ -1,6 +1,7 @@
 eo-learn-core
 munch
-tensorflow-gpu>=2.1.0
+tensorflow>=2.1.0
 numpy
 marshmallow
 matplotlib
+h5py
