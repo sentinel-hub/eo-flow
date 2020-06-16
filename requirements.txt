@@ -1,6 +1,7 @@
 eo-learn-core
 munch
 tensorflow>=2.1.0
+tensorflow-addons
 numpy
 marshmallow
 matplotlib
