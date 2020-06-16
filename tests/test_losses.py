@@ -1,7 +1,8 @@
 import unittest
 import numpy as np
 
-from eoflow.models.losses import CategoricalCrossEntropy, CategoricalFocalLoss, JaccardDistanceLoss
+from eoflow.models.losses import CategoricalCrossEntropy, CategoricalFocalLoss
+from eoflow.models.losses import JaccardDistanceLoss, TanimotoDistanceLoss
 
 
 class TestLosses(unittest.TestCase):
@@ -86,6 +87,23 @@ class TestLosses(unittest.TestCase):
         self.assertAlmostEqual(val_2, 1.495621, 5)
         self.assertAlmostEqual(val_3, 1.248781, 5)
         self.assertAlmostEqual(val_4, 1.495621, 5)
+
+    def test_tanimoto_loss(self):
+        y_true = np.zeros([1, 32, 32, 2], dtype=np.float32)
+        y_true[:, 16:, :16, 1] = np.ones((1, 16, 16))
+        y_true[..., 0] = np.ones([1, 32, 32]) - y_true[..., 1]
+
+        y_pred = np.zeros([1, 32, 32, 2], dtype=np.float32)
+        y_pred[..., 0] = 1
+
+        self.assertEqual(TanimotoDistanceLoss(from_logits=False)(y_true, y_true).numpy(), 0.0)
+        self.assertEqual(TanimotoDistanceLoss(from_logits=False)(y_pred, y_pred).numpy(), 0.0)
+        self.assertAlmostEqual(TanimotoDistanceLoss(from_logits=False)(y_true, y_pred).numpy(), 1.25, 5)
+        self.assertAlmostEqual(TanimotoDistanceLoss(from_logits=False, normalise=True)(y_true, y_pred).numpy(),
+                               1.2499881, 5)
+        self.assertAlmostEqual(TanimotoDistanceLoss(from_logits=False, class_weights=np.array([1, 0]))(y_true,
+                                                                                                       y_pred).numpy(),
+                               0.25, 5)
 
 
 if __name__ == '__main__':
