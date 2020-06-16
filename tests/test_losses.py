@@ -100,7 +100,7 @@ class TestLosses(unittest.TestCase):
         self.assertEqual(TanimotoDistanceLoss(from_logits=False)(y_pred, y_pred).numpy(), 0.0)
         self.assertAlmostEqual(TanimotoDistanceLoss(from_logits=False)(y_true, y_pred).numpy(), 1.25, 5)
         self.assertAlmostEqual(TanimotoDistanceLoss(from_logits=False, normalise=True)(y_true, y_pred).numpy(),
-                               1.2499881, 5)
+                               1.2460148, 5)
         self.assertAlmostEqual(TanimotoDistanceLoss(from_logits=False, class_weights=np.array([1, 0]))(y_true,
                                                                                                        y_pred).numpy(),
                                0.25, 5)

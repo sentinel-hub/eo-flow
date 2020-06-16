@@ -209,13 +209,15 @@ class TanimotoDistanceLoss(Loss):
         volume = tf.reduce_mean(tf.reduce_sum(y_true, axis=(1, 2)), axis=0) \
             if self.normalise else tf.ones(n_classes, dtype=tf.float32)
 
+        volume = tf.where(tf.math.is_inf(volume), tf.ones_like(volume) * tf.reduce_max(volume), volume)
+
         intersection = tf.reduce_sum(y_true * y_pred, axis=(1, 2))
 
         sum_ = tf.reduce_sum(y_true * y_true + y_pred * y_pred, axis=(1, 2))
 
-        num_ = tf.multiply(intersection, tf.math.reciprocal(volume)) + self.smooth
+        num_ = tf.multiply(intersection, tf.math.reciprocal(tf.math.square(volume))) + self.smooth
 
-        den_ = tf.multiply(sum_ - intersection, tf.math.reciprocal(volume)) + self.smooth
+        den_ = tf.multiply(sum_ - intersection, tf.math.reciprocal(tf.math.square(volume))) + self.smooth
 
         tanimoto = num_ / den_
 
