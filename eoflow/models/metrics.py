@@ -97,11 +97,14 @@ class CroppedMetric(tf.keras.metrics.Metric):
 
 
 class MCCMetric(InitializableMetric):
-    """ Computes Mathew Correlation Coefficient metric. Wraps tf.addons.TODO to work on logits. """
+    """ Computes Mathew Correlation Coefficient metric. Wraps metrics.MatthewsCorrelationCoefficient from
+    tensorflow-addons, and reshapes the input (logits) into (m, n_classes) tensors."""
 
     def __init__(self, default_n_classes=1, name='mcc'):
-        """ Creates MeanIoU metric
+        """ Creates MCCMetric metric
 
+        :param default_n_classes: Default number of classes
+        :type default_n_classes: int
         :param name: Name of the metric
         :type name: str
         """
@@ -122,7 +125,7 @@ class MCCMetric(InitializableMetric):
     def update_state(self, y_true, y_pred, sample_weight=None):
         self.assert_initialized()
 
-        n = tf.math.reduce_prod(y_true.shape[:-1])
+        n = tf.math.reduce_prod(tf.shape(y_pred)[:-1])
         y_pred_c = tf.reshape(y_pred, (n, self.metric.num_classes))
         y_true_c = tf.reshape(y_true, (n, self.metric.num_classes))
 
