@@ -89,6 +89,7 @@ class TestLosses(unittest.TestCase):
         self.assertAlmostEqual(val_4, 1.495621, 5)
 
     def test_tanimoto_loss(self):
+
         y_true = np.zeros([1, 32, 32, 2], dtype=np.float32)
         y_true[:, 16:, :16, 1] = np.ones((1, 16, 16))
         y_true[..., 0] = np.ones([1, 32, 32]) - y_true[..., 1]
@@ -104,6 +105,10 @@ class TestLosses(unittest.TestCase):
         self.assertAlmostEqual(TanimotoDistanceLoss(from_logits=False, class_weights=np.array([1, 0]))(y_true,
                                                                                                        y_pred).numpy(),
                                0.25, 5)
+
+        y_true = np.zeros([1, 32, 32, 2], dtype=np.float32)
+        y_true[..., 0] = np.ones([1, 32, 32]) - y_true[..., 1]
+        self.assertEqual(TanimotoDistanceLoss(from_logits=False, normalise=True)(y_true, y_pred).numpy(), 0.)
 
 
 if __name__ == '__main__':
