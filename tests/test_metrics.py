@@ -110,6 +110,25 @@ class TestMCC(unittest.TestCase):
         results = metric.result().numpy()
         self.assertAlmostEqual(results[0], results[1], 7)
 
+    def test_mcc_single_vs_binary(self):
+        metric_single = MCCMetric()
+        metric_single.init_from_config({'n_classes': 1})
+
+        y_pred = np.random.randint(0, 2, (32, 32, 1))
+        y_true = np.random.randint(0, 2, (32, 32, 1))
+        metric_single.update_state(y_true, y_pred)
+        result_single = metric_single.result().numpy()[0]
+
+        metric_binary = MCCMetric()
+        metric_binary.init_from_config({'n_classes': 2})
+
+        y_pred = np.concatenate((y_pred, 1-y_pred), axis=-1)
+        y_true = np.concatenate((y_true, 1 - y_true), axis=-1)
+        metric_binary.update_state(y_true, y_pred)
+        result_binary = metric_binary.result().numpy()[0]
+
+        self.assertAlmostEqual(result_single, result_binary, 7)
+
     def test_mcc_results(self):
         # test is from an example of MCC in sklearn.metrics matthews_corrcoef
         y_true = np.array([1, 1, 1, 0])[..., np.newaxis]
