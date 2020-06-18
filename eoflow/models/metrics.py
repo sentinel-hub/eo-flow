@@ -101,7 +101,7 @@ class MCCMetric(InitializableMetric):
     tensorflow-addons, and reshapes the input (logits) into (m, n_classes) tensors. The logits are thresholded to get
     "one-hot encoded" values for (multi)class metrics """
 
-    def __init__(self, default_n_classes=1, default_threshold=0.5, name='mcc'):
+    def __init__(self, default_n_classes=2, default_threshold=0.5, name='mcc'):
         """ Creates MCCMetric metric
 
         :param default_n_classes: Default number of classes
