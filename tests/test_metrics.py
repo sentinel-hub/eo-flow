@@ -138,6 +138,14 @@ class TestMCC(unittest.TestCase):
         metric.update_state(y_true, y_pred)
         self.assertAlmostEqual(metric.result().numpy()[0], -0.3333333, 7)
 
+    def test_mcc_threshold(self):
+        y_true = np.array([1, 1, 1, 0])[..., np.newaxis]
+        y_pred = np.array([0.9, 0.6, 0.61, 0.7])[..., np.newaxis]
+        metric = MCCMetric()
+        metric.init_from_config({'n_classes': 1, 'mcc_threshold': 0.6})
+        metric.update_state(y_true, y_pred)
+        self.assertAlmostEqual(metric.result().numpy()[0], -0.3333333, 7)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -98,13 +98,16 @@ class CroppedMetric(tf.keras.metrics.Metric):
 
 class MCCMetric(InitializableMetric):
     """ Computes Mathew Correlation Coefficient metric. Wraps metrics.MatthewsCorrelationCoefficient from
-    tensorflow-addons, and reshapes the input (logits) into (m, n_classes) tensors."""
+    tensorflow-addons, and reshapes the input (logits) into (m, n_classes) tensors. The logits are thresholded to get
+    "one-hot encoded" values for (multi)class metrics """
 
-    def __init__(self, default_n_classes=1, name='mcc'):
+    def __init__(self, default_n_classes=1, default_threshold=0.5, name='mcc'):
         """ Creates MCCMetric metric
 
         :param default_n_classes: Default number of classes
         :type default_n_classes: int
+        :param default_threshold: Default value for threshold
+        :type default_threshold: float
         :param name: Name of the metric
         :type name: str
         """
@@ -112,6 +115,7 @@ class MCCMetric(InitializableMetric):
         super().__init__(name=name, dtype=tf.float32)
         self.metric = None
         self.default_n_classes = default_n_classes
+        self.threshold = default_threshold
 
     def init_from_config(self, model_config=None):
         super().init_from_config(model_config)
@@ -122,11 +126,18 @@ class MCCMetric(InitializableMetric):
             print("n_classes not found in model config or model config not provided. Using default max value.")
             self.metric = tfa.metrics.MatthewsCorrelationCoefficient(num_classes=self.default_n_classes)
 
+        if model_config is not None and 'mcc_threshold' in model_config:
+            self.threshold = model_config['mcc_threshold']
+        else:
+            print(f"Using default value for threshold: {self.threshold}.")
+
+        self.metric = tfa.metrics.MatthewsCorrelationCoefficient(num_classes=model_config['n_classes'])
+
     def update_state(self, y_true, y_pred, sample_weight=None):
         self.assert_initialized()
 
         n = tf.math.reduce_prod(tf.shape(y_pred)[:-1])
-        y_pred_c = tf.reshape(y_pred, (n, self.metric.num_classes))
+        y_pred_c = tf.reshape(y_pred > self.threshold, (n, self.metric.num_classes))
         y_true_c = tf.reshape(y_true, (n, self.metric.num_classes))
 
         return self.metric.update_state(y_true_c, y_pred_c, sample_weight)
