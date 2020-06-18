@@ -134,7 +134,7 @@ class ResidualBlock(tf.keras.layers.Layer):
 class Conv2D(tf.keras.layers.Layer):
     """ Multiple repetitions of 2d convolution, batch normalization and dropout layers. """
 
-    def __init__(self, filters, kernel_size=3, strides=1, padding='VALID', add_dropout=True, dropout_rate=0.2,
+    def __init__(self, filters, kernel_size=3, strides=1, dilation=1, padding='VALID', add_dropout=True, dropout_rate=0.2,
                  batch_normalization=False, num_repetitions=1):
         super().__init__()
 
@@ -146,6 +146,7 @@ class Conv2D(tf.keras.layers.Layer):
                 filters=filters,
                 kernel_size=kernel_size,
                 strides=strides,
+                dilation_rate=dilation,
                 padding=padding,
                 activation='relu'
             ))
@@ -164,6 +165,31 @@ class Conv2D(tf.keras.layers.Layer):
 
     def call(self, inputs, training=False):
         return self.combined_layer(inputs, training=training)
+
+
+class ResConv2D(tf.keras.layers.Layer):
+    """ Multiple repetitions of 2d convolution, batch normalization and dropout layers. """
+
+    def __init__(self, filters, kernel_size=3, strides=1, dilation=1, padding='VALID', add_dropout=True,
+                 dropout_rate=0.2, batch_normalization=False, num_parallel=1):
+        super().__init__()
+
+        self.convs = [Conv2D(filters,
+                             kernel_size=kernel_size,
+                             strides=strides,
+                             dilation=dilation,
+                             padding=padding,
+                             add_dropout=add_dropout,
+                             dropout_rate=dropout_rate,
+                             batch_normalization=batch_normalization,
+                             num_repetitions=2) for _ in range(num_parallel)]
+
+        self.add = tf.keras.layers.Add()
+
+    def call(self, inputs, training=False):
+        outputs = [conv_layer(inputs, training=training) for conv_layer in self.convs]
+
+        return self.add(outputs + [inputs])
 
 
 class Conv3D(tf.keras.layers.Layer):
