@@ -134,8 +134,8 @@ class ResidualBlock(tf.keras.layers.Layer):
 class Conv2D(tf.keras.layers.Layer):
     """ Multiple repetitions of 2d convolution, batch normalization and dropout layers. """
 
-    def __init__(self, filters, kernel_size=3, strides=1, dilation=1, padding='VALID', add_dropout=True, dropout_rate=0.2,
-                 batch_normalization=False, num_repetitions=1):
+    def __init__(self, filters, kernel_size=3, strides=1, dilation=1, padding='VALID', add_dropout=True,
+                 dropout_rate=0.2, activation='relu', batch_normalization=False, num_repetitions=1):
         super().__init__()
 
         repetitions = []
@@ -148,7 +148,7 @@ class Conv2D(tf.keras.layers.Layer):
                 strides=strides,
                 dilation_rate=dilation,
                 padding=padding,
-                activation='relu'
+                activation=activation
             ))
 
             if batch_normalization:
@@ -179,7 +179,7 @@ class ResConv2D(tf.keras.layers.Layer):
     """
 
     def __init__(self, filters, kernel_size=3, strides=1, dilation=1, padding='VALID', add_dropout=True,
-                 dropout_rate=0.2, batch_normalization=False, num_parallel=1):
+                 dropout_rate=0.2, activation='relu', batch_normalization=False, num_parallel=1):
         super().__init__()
 
         if isinstance(kernel_size, list) and len(kernel_size) != num_parallel:
@@ -196,6 +196,7 @@ class ResConv2D(tf.keras.layers.Layer):
                              strides=strides,
                              dilation=d,
                              padding=padding,
+                             activation=activation,
                              add_dropout=add_dropout,
                              dropout_rate=dropout_rate,
                              batch_normalization=batch_normalization,
