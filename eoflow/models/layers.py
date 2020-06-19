@@ -168,21 +168,38 @@ class Conv2D(tf.keras.layers.Layer):
 
 
 class ResConv2D(tf.keras.layers.Layer):
-    """ Multiple repetitions of 2d convolution, batch normalization and dropout layers. """
+    """
+    Layer of N residual convolutional blocks stacked in parallel
+
+    This layer stacks in parallel a sequence of 2 2D convolutional layers and returns the addition of their output
+    feature tensors with the input tensor. N number of convolutional blocks can be added together with different kernel
+    size and dilation rate, which are specified as a list. If the inputs are not a list, the same parameters are used
+    for all convolutional blocks.
+
+    """
 
     def __init__(self, filters, kernel_size=3, strides=1, dilation=1, padding='VALID', add_dropout=True,
                  dropout_rate=0.2, batch_normalization=False, num_parallel=1):
         super().__init__()
 
+        if isinstance(kernel_size, list) and len(kernel_size) != num_parallel:
+            raise ValueError('Number of specified kernel sizes needs to match num_parallel')
+
+        if isinstance(dilation, list) and len(dilation) != num_parallel:
+            raise ValueError('Number of specified dilation rate sizes needs to match num_parallel')
+
+        kernel_list = kernel_size if isinstance(kernel_size, list) else [kernel_size]*num_parallel
+        dilation_list = dilation if isinstance(dilation, list) else [dilation]*num_parallel
+
         self.convs = [Conv2D(filters,
-                             kernel_size=kernel_size,
+                             kernel_size=k,
                              strides=strides,
-                             dilation=dilation,
+                             dilation=d,
                              padding=padding,
                              add_dropout=add_dropout,
                              dropout_rate=dropout_rate,
                              batch_normalization=batch_normalization,
-                             num_repetitions=2) for _ in range(num_parallel)]
+                             num_repetitions=2) for _, k, d in zip(range(num_parallel), kernel_list, dilation_list)]
 
         self.add = tf.keras.layers.Add()
 
