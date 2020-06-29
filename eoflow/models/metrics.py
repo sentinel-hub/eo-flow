@@ -140,7 +140,7 @@ class MCCMetric(InitializableMetric):
         y_pred_c = tf.reshape(y_pred > self.threshold, (n, self.metric.num_classes))
         y_true_c = tf.reshape(y_true, (n, self.metric.num_classes))
 
-        return self.metric.update_state(y_true_c, y_pred_c, sample_weight)
+        return self.metric.update_state(y_true_c, y_pred_c, sample_weight=sample_weight)
 
     def result(self):
         self.assert_initialized()
