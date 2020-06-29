@@ -20,6 +20,7 @@ class FCNModel(BaseSegmentationModel):
         conv_size = fields.Int(missing=3, description='Size of the convolution kernels.')
         deconv_size = fields.Int(missing=2, description='Size of the deconvolution kernels.')
         conv_stride = fields.Int(missing=1, description='Stride used in convolutions.')
+        dilation_rate = fields.Int(missing=1, description='Dilation rate used in convolutions.')
         add_dropout = fields.Bool(missing=False, description='Add dropout to layers.')
         add_batch_norm = fields.Bool(missing=True, description='Add batch normalization to layers.')
         bias_init = fields.Float(missing=0.0, description='Bias initialization value.')
@@ -51,6 +52,7 @@ class FCNModel(BaseSegmentationModel):
                 filters=features,
                 kernel_size=self.config.conv_size,
                 strides=self.config.conv_stride,
+                dilation=self.config.dilation_rate,
                 add_dropout=self.config.add_dropout,
                 dropout_rate=dropout_rate,
                 batch_normalization=self.config.add_batch_norm,
@@ -70,6 +72,7 @@ class FCNModel(BaseSegmentationModel):
             filters=2 ** self.config.n_layers * self.config.features_root,
             kernel_size=self.config.conv_size,
             strides=self.config.conv_stride,
+            dilation=self.config.dilation_rate,
             add_dropout=self.config.add_dropout,
             dropout_rate=dropout_rate,
             batch_normalization=self.config.add_batch_norm,
@@ -85,13 +88,6 @@ class FCNModel(BaseSegmentationModel):
             # get same number of features as counterpart layer
             features = 2 ** conterpart_layer * self.config.features_root
 
-            # transposed convolution to upsample tensors
-            # shape = net.get_shape().as_list()
-            # deconv_output_shape = [tf.shape(net)[0],
-            #                        shape[1] * self.config.deconv_size,
-            #                        shape[2] * self.config.deconv_size,
-            #                        features]
-
             deconv = Deconv2D(
                 filters=features,
                 kernel_size=self.config.deconv_size,
@@ -106,6 +102,7 @@ class FCNModel(BaseSegmentationModel):
                 filters=features,
                 kernel_size=self.config.conv_size,
                 strides=self.config.conv_stride,
+                dilation=self.config.dilation_rate,
                 add_dropout=self.config.add_dropout,
                 dropout_rate=dropout_rate,
                 batch_normalization=self.config.add_batch_norm,
