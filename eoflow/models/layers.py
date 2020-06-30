@@ -200,7 +200,7 @@ class ResConv2D(tf.keras.layers.Layer):
                              add_dropout=add_dropout,
                              dropout_rate=dropout_rate,
                              batch_normalization=batch_normalization,
-                             num_repetitions=2) for _, k, d in zip(range(num_parallel), kernel_list, dilation_list)]
+                             num_repetitions=2) for k, d in zip(kernel_list, dilation_list)]
 
         self.add = tf.keras.layers.Add()
 
