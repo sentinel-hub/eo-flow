@@ -376,6 +376,8 @@ class PyramidPoolingModule(tf.keras.layers.Layer):
                 layer.add(BatchNormalization())
             layer.add(Activation('relu'))
 
+            layer.add(UpSampling2D(size=(height//bin_size, width//bin_size), interpolation=self.interpolation))
+
             layers.append(layer)
 
         self.layers = layers
@@ -386,8 +388,6 @@ class PyramidPoolingModule(tf.keras.layers.Layer):
 
         outputs = list([inputs])
 
-        for layer, bin_size in zip(self.layers, self.bins):
-            upsample = UpSampling2D(size=(height//bin_size, width//bin_size), interpolation=self.interpolation)
-            outputs.append(upsample(layer(inputs, training=training)))
+        outputs += [layer(inputs, training=training) for layer in self.layers]
 
         return tf.concat(outputs, axis=-1)
