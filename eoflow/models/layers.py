@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from tensorflow.keras.layers import Activation, SpatialDropout1D, Lambda
+from tensorflow.keras.layers import Activation, SpatialDropout1D, Lambda, UpSampling2D, AveragePooling2D
 from tensorflow.keras.layers import Conv1D, BatchNormalization, LayerNormalization
 
 
@@ -338,3 +338,56 @@ class Reduce3DTo2D(tf.keras.layers.Layer):
 
         # Squeeze along temporal dimension
         return tf.squeeze(r, axis=[1])
+
+
+class PyramidPoolingModule(tf.keras.layers.Layer):
+    """
+    Implementation of the Pyramid Pooling Module
+
+    Implementation taken from the following paper
+
+    Zhao et al. - Pyramid Scene Parsing Network - https://arxiv.org/pdf/1612.01105.pdf
+
+    PyTorch implementation https://github.com/hszhao/semseg/blob/master/model/pspnet.py
+    """
+    def __init__(self, filters, bins=(1, 2, 4, 8), interpolation='bilinear', batch_normalization=False):
+        super().__init__()
+
+        self.filters = filters
+        self.bins = bins
+        self.batch_normalization = batch_normalization
+        self.interpolation = interpolation
+        self.layers = None
+
+    def build(self, input_size):
+        _, height, width, n_features = input_size
+
+        layers = []
+
+        for bin_size in self.bins:
+            layer = tf.keras.Sequential()
+            layer.add(AveragePooling2D(pool_size=(height//bin_size, width//bin_size),
+                                       padding='same'))
+            layer.add(tf.keras.layers.Conv2D(filters=self.filters//len(self.bins),
+                                             kernel_size=1,
+                                             padding='same',
+                                             use_bias=False))
+            if self.batch_normalization:
+                layer.add(BatchNormalization())
+            layer.add(Activation('relu'))
+
+            layers.append(layer)
+
+        self.layers = layers
+
+    def call(self, inputs, training=None):
+        """ Concatenate the output of the pooling layers, resampled to original size """
+        _, height, width, _ = inputs.shape
+
+        outputs = list([inputs])
+
+        for layer, bin_size in zip(self.layers, self.bins):
+            upsample = UpSampling2D(size=(height//bin_size, width//bin_size), interpolation=self.interpolation)
+            outputs.append(upsample(layer(inputs, training=training)))
+
+        return tf.concat(outputs, axis=-1)
