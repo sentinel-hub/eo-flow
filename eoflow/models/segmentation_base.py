@@ -32,7 +32,7 @@ segmentation_metrics = {
     'iou': lambda: MeanIoU(default_max_classes=32),
     'precision': tf.keras.metrics.Precision,
     'recall': tf.keras.metrics.Recall,
-    'mcc': lambda: MCCMetric()
+    'mcc': MCCMetric
 }
 
 
