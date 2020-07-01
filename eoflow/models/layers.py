@@ -365,8 +365,11 @@ class PyramidPoolingModule(tf.keras.layers.Layer):
         layers = []
 
         for bin_size in self.bins:
+
+            size_factors = height // bin_size, width // bin_size
+
             layer = tf.keras.Sequential()
-            layer.add(AveragePooling2D(pool_size=(height//bin_size, width//bin_size),
+            layer.add(AveragePooling2D(pool_size=size_factors,
                                        padding='same'))
             layer.add(tf.keras.layers.Conv2D(filters=self.filters//len(self.bins),
                                              kernel_size=1,
@@ -376,7 +379,7 @@ class PyramidPoolingModule(tf.keras.layers.Layer):
                 layer.add(BatchNormalization())
             layer.add(Activation('relu'))
 
-            layer.add(UpSampling2D(size=(height//bin_size, width//bin_size), interpolation=self.interpolation))
+            layer.add(UpSampling2D(size=size_factors, interpolation=self.interpolation))
 
             layers.append(layer)
 
@@ -386,7 +389,7 @@ class PyramidPoolingModule(tf.keras.layers.Layer):
         """ Concatenate the output of the pooling layers, resampled to original size """
         _, height, width, _ = inputs.shape
 
-        outputs = list([inputs])
+        outputs = [inputs]
 
         outputs += [layer(inputs, training=training) for layer in self.layers]
 
