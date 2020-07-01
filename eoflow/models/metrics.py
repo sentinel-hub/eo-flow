@@ -1,5 +1,7 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
+from skimage import measure
+import numpy as np
 
 
 class InitializableMetric(tf.keras.metrics.Metric):
@@ -156,3 +158,264 @@ class MCCMetric(InitializableMetric):
         self.assert_initialized()
 
         return self.metric.get_config()
+
+
+class OversegmentationMetric(tf.keras.metrics.Metric):
+
+    @staticmethod
+    def _segmentation_error(intersection_area, object_area):
+        return 1. - intersection_area / object_area
+
+    def __init__(self, metric_name, metric_dtype):
+        super().__init__(name=metric_name, dtype=metric_dtype)
+        self.oversegmentation_error = []
+
+    def update_state(self, reference, measurement, encode_reference=True, background_value: int = 0):
+        if encode_reference:
+            cc_reference = measure.label(reference, background=background_value)
+        else:
+            cc_reference = reference
+
+        cc_measurement = measure.label(measurement, background=background_value)
+        components_reference = set(np.unique(cc_reference)).difference([background_value])
+
+        for component in components_reference:
+            reference_mask = cc_reference == component
+            uniq, count = np.unique(cc_measurement[reference_mask], return_counts=True)
+            ref_area = np.sum(reference_mask)
+            intersection_area = count.max()
+
+            self.oversegmentation_error.append(self._segmentation_error(intersection_area, ref_area))
+
+    def get_oversegmentation_error(self):
+        return np.array(self.oversegmentation_error).mean()
+
+    def result(self):
+        return self.get_oversegmentation_error()
+
+    def reset_states(self):
+        self.oversegmentation_error = []
+
+
+class UndersegmentationMetric(tf.keras.metrics.Metric):
+
+    @staticmethod
+    def _segmentation_error(intersection_area, object_area):
+        return 1. - intersection_area / object_area
+
+    def __init__(self, metric_name, metric_dtype):
+        super().__init__(name=metric_name, dtype=metric_dtype)
+        self.undersegmentation_error = []
+
+    def update_state(self, reference, measurement, encode_reference=True, background_value: int = 0):
+        if encode_reference:
+            cc_reference = measure.label(reference, background=background_value)
+        else:
+            cc_reference = reference
+
+        cc_measurement = measure.label(measurement, background=background_value)
+        components_reference = set(np.unique(cc_reference)).difference([background_value])
+
+        for component in components_reference:
+            reference_mask = cc_reference == component
+            uniq, count = np.unique(cc_measurement[reference_mask], return_counts=True)
+            max_interecting_measurement = uniq[count.argmax()]
+            meas_area = np.count_nonzero(cc_measurement == max_interecting_measurement)
+            intersection_area = count.max()
+
+            self.undersegmentation_error.append(self._segmentation_error(intersection_area, meas_area))
+
+    def get_undersegmentation_error(self):
+        return np.array(self.undersegmentation_error).mean()
+
+    def result(self):
+        return self.get_undersegmentation_error()
+
+    def reset_states(self):
+        self.undersegmentation_error = []
+
+
+class BorderMetric(tf.keras.metrics.Metric):
+
+    @staticmethod
+    def _intersection(mask1, mask2):
+        return np.sum(np.logical_and(mask1, mask2))
+
+    def _border_err(self, border_ref_edge, border_meas_edge):
+        ref_edge_size = np.sum(border_ref_edge)
+        intersection = self._intersection(border_ref_edge, border_meas_edge)
+        err = intersection / ref_edge_size if ref_edge_size != 0 else 0
+        be = 1. - err
+        return be
+
+    def __init__(self, metric_name, metric_dtype, edge_func, pixel_size=1, **edge_func_params):
+        super().__init__(name=metric_name, dtype=metric_dtype)
+
+        self.border_error = []
+        self.edge_func = edge_func
+        self.edge_func_params = edge_func_params
+        self.pixel_size = pixel_size
+
+    def update_state(self, reference, measurement, encode_reference=True, background_value: int = 0):
+        if encode_reference:
+            cc_reference = measure.label(reference, background=background_value)
+        else:
+            cc_reference = reference
+
+        cc_measurement = measure.label(measurement, background=background_value)
+        components_reference = set(np.unique(cc_reference)).difference([background_value])
+
+        ref_edges = self.edge_func(cc_reference, **self.edge_func_params)
+        meas_edges = self.edge_func(cc_measurement, **self.edge_func_params)
+
+        for component in components_reference:
+            reference_mask = cc_reference == component
+            uniq, count = np.unique(cc_measurement[reference_mask], return_counts=True)
+            max_interecting_measurement = uniq[count.argmax()]
+            meas_mask = cc_measurement == max_interecting_measurement
+
+            border_ref_edge = ref_edges.squeeze() & reference_mask.squeeze()
+            border_meas_edge = meas_edges.squeeze() & meas_mask.squeeze()
+
+            self.border_error.append(self._calculate_border_error(border_ref_edge, border_meas_edge))
+
+    def get_border_error(self):
+        return np.array(self.border_error).mean()
+
+    def result(self):
+        return self.get_border_error()
+
+    def reset_states(self):
+        self.border_error = []
+
+
+class FragmentationMetric(tf.keras.metrics.Metric):
+
+    def _fragmentation_err(self, r, reference_mask):
+        if r <= 1:
+            return 0
+        else:
+            den = np.sum(reference_mask) - self.pixel_size
+            err = (r - 1.) / den if den > 0 else 0
+            return err
+
+    def __init__(self, metric_name, metric_dtype, pixel_size=1,):
+        super().__init__(name=metric_name, dtype=metric_dtype)
+
+        self.fragmentation_error = []
+        self.pixel_size = pixel_size
+
+    def update_state(self, reference, measurement, encode_reference=True, background_value: int = 0):
+        if encode_reference:
+            cc_reference = measure.label(reference, background=background_value)
+        else:
+            cc_reference = reference
+
+        cc_measurement = measure.label(measurement, background=background_value)
+        components_reference = set(np.unique(cc_reference)).difference([background_value])
+
+        for component in components_reference:
+            reference_mask = cc_reference == component
+            uniq = np.unique(cc_measurement[reference_mask])
+            self.fragmentation_error.append(self._fragmentation_err(len(uniq), reference_mask))
+
+    def get_fragmentation_error(self):
+        return np.array(self.fragmentation_error).mean()
+
+    def result(self):
+        return self.get_fragmentation_error()
+
+    def reset_states(self):
+        self.fragmentation_error = []
+
+
+class GeometricMetrics(tf.keras.metrics.Metric):
+
+    @staticmethod
+    def _segmentation_error(intersection_area, object_area):
+        return 1. - intersection_area / object_area
+
+    @staticmethod
+    def _intersection(mask1, mask2):
+        return np.sum(np.logical_and(mask1, mask2))
+
+    def _border_err(self, border_ref_edge, border_meas_edge):
+        ref_edge_size = np.sum(border_ref_edge)
+        intersection = self._intersection(border_ref_edge, border_meas_edge)
+        err = intersection / ref_edge_size if ref_edge_size != 0 else 0
+        be = 1. - err
+        return be
+
+    def _fragmentation_err(self, r, reference_mask):
+        if r <= 1:
+            return 0
+        else:
+            den = np.sum(reference_mask) - self.pixel_size
+            err = (r - 1.) / den if den > 0 else 0
+            return err
+
+    def __init__(self, metric_name, metric_dtype, edge_func, pixel_size=1, **edge_func_params):
+        super().__init__(name=metric_name, dtype=metric_dtype)
+
+        self.oversegmentation_error = []
+        self.undersegmentation_error = []
+        self.border_error = []
+        self.fragmentation_error = []
+
+        self.edge_func = edge_func
+        self.edge_func_params = edge_func_params
+        self.pixel_size = pixel_size
+
+    def update_state(self, reference, measurement, encode_reference=True, background_value: int = 0):
+        if encode_reference:
+            cc_reference = measure.label(reference, background=background_value)
+        else:
+            cc_reference = reference
+
+        cc_measurement = measure.label(measurement, background=background_value)
+        components_reference = set(np.unique(cc_reference)).difference([background_value])
+
+        ref_edges = self.edge_func(cc_reference, **self.edge_func_params)
+        meas_edges = self.edge_func(cc_measurement, **self.edge_func_params)
+
+        for component in components_reference:
+            reference_mask = cc_reference == component
+            uniq, count = np.unique(cc_measurement[reference_mask], return_counts=True)
+            max_interecting_measurement = uniq[count.argmax()]
+            meas_mask = cc_measurement == max_interecting_measurement
+            ref_area = np.sum(reference_mask)
+            meas_area = np.count_nonzero(cc_measurement == max_interecting_measurement)
+            intersection_area = count.max()
+
+            self.oversegmentation_error.append(self._segmentation_error(intersection_area, ref_area))
+            self.undersegmentation_error.append(self._segmentation_error(intersection_area, meas_area))
+
+            border_ref_edge = ref_edges.squeeze() & reference_mask.squeeze()
+            border_meas_edge = meas_edges.squeeze() & meas_mask.squeeze()
+
+            self.border_error.append(self._calculate_border_error(border_ref_edge, border_meas_edge))
+            self.fragmentation_error.append(self._fragmentation_err(len(uniq), reference_mask))
+
+    def get_oversegmentation_error(self):
+        return np.array(self.oversegmentation_error).mean()
+
+    def get_undersegmentation_error(self):
+        return np.array(self.undersegmentation_error).mean()
+
+    def get_border_error(self):
+        return np.array(self.border_error).mean()
+
+    def get_fragmentation_error(self):
+        return np.array(self.fragmentation_error).mean()
+
+    def result(self):
+        return {'oversegmentation': self.get_oversegmentation_error(),
+                'undersegmentation': self.get_undersegmentation_error(),
+                'border': self.get_border_error(),
+                'fragmentation': self.get_fragmentation_error()}
+
+    def reset_states(self):
+        self.oversegmentation_error = []
+        self.undersegmentation_error = []
+        self.border_error = []
+        self.fragmentation_error = []
