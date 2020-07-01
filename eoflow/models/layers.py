@@ -134,8 +134,8 @@ class ResidualBlock(tf.keras.layers.Layer):
 class Conv2D(tf.keras.layers.Layer):
     """ Multiple repetitions of 2d convolution, batch normalization and dropout layers. """
 
-    def __init__(self, filters, kernel_size=3, strides=1, padding='VALID', add_dropout=True, dropout_rate=0.2,
-                 batch_normalization=False, num_repetitions=1):
+    def __init__(self, filters, kernel_size=3, strides=1, dilation=1, padding='VALID', add_dropout=True,
+                 dropout_rate=0.2, activation='relu', batch_normalization=False, num_repetitions=1):
         super().__init__()
 
         repetitions = []
@@ -146,8 +146,9 @@ class Conv2D(tf.keras.layers.Layer):
                 filters=filters,
                 kernel_size=kernel_size,
                 strides=strides,
+                dilation_rate=dilation,
                 padding=padding,
-                activation='relu'
+                activation=activation
             ))
 
             if batch_normalization:
@@ -164,6 +165,49 @@ class Conv2D(tf.keras.layers.Layer):
 
     def call(self, inputs, training=False):
         return self.combined_layer(inputs, training=training)
+
+
+class ResConv2D(tf.keras.layers.Layer):
+    """
+    Layer of N residual convolutional blocks stacked in parallel
+
+    This layer stacks in parallel a sequence of 2 2D convolutional layers and returns the addition of their output
+    feature tensors with the input tensor. N number of convolutional blocks can be added together with different kernel
+    size and dilation rate, which are specified as a list. If the inputs are not a list, the same parameters are used
+    for all convolutional blocks.
+
+    """
+
+    def __init__(self, filters, kernel_size=3, strides=1, dilation=1, padding='VALID', add_dropout=True,
+                 dropout_rate=0.2, activation='relu', batch_normalization=False, num_parallel=1):
+        super().__init__()
+
+        if isinstance(kernel_size, list) and len(kernel_size) != num_parallel:
+            raise ValueError('Number of specified kernel sizes needs to match num_parallel')
+
+        if isinstance(dilation, list) and len(dilation) != num_parallel:
+            raise ValueError('Number of specified dilation rate sizes needs to match num_parallel')
+
+        kernel_list = kernel_size if isinstance(kernel_size, list) else [kernel_size]*num_parallel
+        dilation_list = dilation if isinstance(dilation, list) else [dilation]*num_parallel
+
+        self.convs = [Conv2D(filters,
+                             kernel_size=k,
+                             strides=strides,
+                             dilation=d,
+                             padding=padding,
+                             activation=activation,
+                             add_dropout=add_dropout,
+                             dropout_rate=dropout_rate,
+                             batch_normalization=batch_normalization,
+                             num_repetitions=2) for k, d in zip(kernel_list, dilation_list)]
+
+        self.add = tf.keras.layers.Add()
+
+    def call(self, inputs, training=False):
+        outputs = [conv_layer(inputs, training=training) for conv_layer in self.convs]
+
+        return self.add(outputs + [inputs])
 
 
 class Conv3D(tf.keras.layers.Layer):
