@@ -162,7 +162,7 @@ class MCCMetric(InitializableMetric):
         return self.metric.get_config()
 
 
-class GeometricMetrics(tf.keras.metrics.Metric):
+class GeometricMetrics(InitializableMetric):
 
     @staticmethod
     def _detect_edges(im: np.ndarray, thr: float = 0) -> np.ndarray:
@@ -198,10 +198,10 @@ class GeometricMetrics(tf.keras.metrics.Metric):
         if np.ndim(reference) != np.ndim(measurement):
             raise ValueError("Reference and measurement input shapes must match.")
 
-    def __init__(self, metric_name: str, metric_dtype: np.dtype, pixel_size: int = 1, edge_func: Callable = None,
-                 **edge_func_params: Any):
+    def __init__(self, pixel_size: int = 1, edge_func: Callable = None, **edge_func_params: Any):
 
-        super().__init__(name=metric_name, dtype=metric_dtype)
+        super().__init__(name='geometric_metrics', dtype=tf.float64)
+
         self.oversegmentation_error = []
         self.undersegmentation_error = []
         self.border_error = []
@@ -211,8 +211,11 @@ class GeometricMetrics(tf.keras.metrics.Metric):
         self.edge_func_params = edge_func_params
         self.pixel_size = pixel_size
 
-    def update_state(self, reference: np.ndarray, measurement: np.ndarray,
-                     encode_reference: bool = True, background_value: int = 0) -> None :
+    def update_state(self, reference: np.ndarray, measurement: np.ndarray, encode_reference: bool = True,
+                     background_value: int = 0) -> None:
+
+        reference = reference.eval() if isinstance(reference, tf.Tensor) else reference
+        measurement = measurement.eval() if isinstance(measurement, tf.Tensor) else measurement
 
         self._validate_input(reference, measurement)
 

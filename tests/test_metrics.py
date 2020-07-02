@@ -158,7 +158,7 @@ class TestGeometricMetric(unittest.TestCase):
 
     def test_equal_geometries(self):
 
-        metric = GeometricMetrics(metric_name='geometries', metric_dtype=np.float64, edge_func=self.detect_edges)
+        metric = GeometricMetrics(edge_func=self.detect_edges)
 
         y_true = np.zeros((2, 32, 32))
         y_pred = np.zeros((2, 32, 32))
@@ -182,7 +182,7 @@ class TestGeometricMetric(unittest.TestCase):
 
     def test_empty_geometries(self):
 
-        metric = GeometricMetrics(metric_name='geometries', metric_dtype=np.float64, edge_func=self.detect_edges)
+        metric = GeometricMetrics(edge_func=self.detect_edges)
 
         y_true = np.ones((1, 32, 32))
         y_pred = np.zeros((1, 32, 32))
@@ -196,7 +196,7 @@ class TestGeometricMetric(unittest.TestCase):
         self.assertEqual(border_err, 1., "For empty geometries border error should be 1!")
 
     def test_quarter(self):
-        metric = GeometricMetrics(metric_name='geometries', metric_dtype=np.float64, edge_func=self.detect_edges)
+        metric = GeometricMetrics(edge_func=self.detect_edges)
 
         # A quarter of measurement covers a quarter of reference
         y_true = np.zeros((1, 200, 200))
@@ -214,7 +214,7 @@ class TestGeometricMetric(unittest.TestCase):
         self.assertAlmostEqual(border_err, 0.9949494949494949)
 
     def test_multiple(self):
-        metric = GeometricMetrics(metric_name='geometries', metric_dtype=np.float64, edge_func=self.detect_edges)
+        metric = GeometricMetrics(edge_func=self.detect_edges)
 
         # A quarter of measurement covers a quarter of reference
         y_true = np.zeros((1, 200, 200))
