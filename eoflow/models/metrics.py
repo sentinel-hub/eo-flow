@@ -3,7 +3,7 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 from skimage import measure
 import numpy as np
-
+from scipy import ndimage
 
 
 class InitializableMetric(tf.keras.metrics.Metric):
@@ -165,6 +165,13 @@ class MCCMetric(InitializableMetric):
 class GeometricMetrics(tf.keras.metrics.Metric):
 
     @staticmethod
+    def _detect_edges(im: np.ndarray, thr: float = 0) -> np.ndarray:
+        sx = ndimage.sobel(im, axis=0, mode='constant')
+        sy = ndimage.sobel(im, axis=1, mode='constant')
+        sob = np.hypot(sx, sy)
+        return sob > thr
+
+    @staticmethod
     def _segmentation_error(intersection_area: float, object_area: float) -> float:
         return 1. - intersection_area / object_area
 
@@ -191,7 +198,7 @@ class GeometricMetrics(tf.keras.metrics.Metric):
         if np.ndim(reference) != np.ndim(measurement):
             raise ValueError("Reference and measurement input shapes must match.")
 
-    def __init__(self, metric_name: str, metric_dtype: np.dtype, edge_func: Callable, pixel_size: int = 1,
+    def __init__(self, metric_name: str, metric_dtype: np.dtype, pixel_size: int = 1, edge_func: Callable = None,
                  **edge_func_params: Any):
 
         super().__init__(name=metric_name, dtype=metric_dtype)
@@ -200,7 +207,7 @@ class GeometricMetrics(tf.keras.metrics.Metric):
         self.border_error = []
         self.fragmentation_error = []
 
-        self.edge_func = edge_func
+        self.edge_func = self._detect_edges if edge_func is None else edge_func
         self.edge_func_params = edge_func_params
         self.pixel_size = pixel_size
 
