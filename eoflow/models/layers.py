@@ -135,7 +135,7 @@ class Conv2D(tf.keras.layers.Layer):
     """ Multiple repetitions of 2d convolution, batch normalization and dropout layers. """
 
     def __init__(self, filters, kernel_size=3, strides=1, dilation=1, padding='VALID', add_dropout=True,
-                 dropout_rate=0.2, activation='relu', batch_normalization=False, num_repetitions=1):
+                 dropout_rate=0.2, activation='relu', batch_normalization=False, use_bias=True, num_repetitions=1):
         super().__init__()
 
         repetitions = []
@@ -148,6 +148,7 @@ class Conv2D(tf.keras.layers.Layer):
                 strides=strides,
                 dilation_rate=dilation,
                 padding=padding,
+                use_bias=use_bias,
                 activation=activation
             ))
 
@@ -179,7 +180,7 @@ class ResConv2D(tf.keras.layers.Layer):
     """
 
     def __init__(self, filters, kernel_size=3, strides=1, dilation=1, padding='VALID', add_dropout=True,
-                 dropout_rate=0.2, activation='relu', batch_normalization=False, num_parallel=1):
+                 dropout_rate=0.2, activation='relu', use_bias=True, batch_normalization=False, num_parallel=1):
         super().__init__()
 
         if isinstance(kernel_size, list) and len(kernel_size) != num_parallel:
@@ -199,6 +200,7 @@ class ResConv2D(tf.keras.layers.Layer):
                              activation=activation,
                              add_dropout=add_dropout,
                              dropout_rate=dropout_rate,
+                             use_bias=use_bias,
                              batch_normalization=batch_normalization,
                              num_repetitions=2) for k, d in zip(kernel_list, dilation_list)]
 
@@ -214,7 +216,7 @@ class Conv3D(tf.keras.layers.Layer):
     """ Multiple repetitions of 3d convolution, batch normalization and dropout layers. """
 
     def __init__(self, filters, kernel_size=3, strides=1, padding='VALID', add_dropout=True, dropout_rate=0.2,
-                 batch_normalization=False, num_repetitions=1, convolve_time=True):
+                 batch_normalization=False, use_bias=True, num_repetitions=1, convolve_time=True):
         super().__init__()
 
         repetitions = []
@@ -229,6 +231,7 @@ class Conv3D(tf.keras.layers.Layer):
                 kernel_size=kernel_shape,
                 strides=strides,
                 padding=padding,
+                use_bias=use_bias,
                 activation='relu'
             ))
 
