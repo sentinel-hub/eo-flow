@@ -213,12 +213,11 @@ class GeometricMetrics(InitializableMetric):
 
     def update_state(self, reference: np.ndarray, measurement: np.ndarray, encode_reference: bool = True,
                      background_value: int = 0) -> None:
-
-        reference = reference.eval() if isinstance(reference, tf.Tensor) else reference
-        measurement = measurement.eval() if isinstance(measurement, tf.Tensor) else measurement
+	
+        reference = reference.numpy() if isinstance(reference, tf.Tensor) else reference
+        measurement = measurement.numpy() if isinstance(measurement, tf.Tensor) else measurement
 
         self._validate_input(reference, measurement)
-
         for ref, meas in zip(reference, measurement):
             if encode_reference:
                 cc_reference = measure.label(ref, background=background_value)
