@@ -131,8 +131,6 @@ class MCCMetric(InitializableMetric):
         else:
             print(f"Using default value for threshold: {self.threshold}.")
 
-        self.metric = tfa.metrics.MatthewsCorrelationCoefficient(num_classes=model_config['n_classes'])
-
     def update_state(self, y_true, y_pred, sample_weight=None):
         self.assert_initialized()
 
