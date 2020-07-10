@@ -1,6 +1,8 @@
 import unittest
 import numpy as np
 
+import tensorflow as tf
+
 from eoflow.models.metrics import MeanIoU, MCCMetric
 
 
@@ -145,6 +147,25 @@ class TestMCC(unittest.TestCase):
         metric.init_from_config({'n_classes': 1, 'mcc_threshold': 0.6})
         metric.update_state(y_true, y_pred)
         self.assertAlmostEqual(metric.result().numpy()[0], -0.3333333, 7)
+
+    def test_fit(self):
+        input_shape = (1, 28, 28, 2)
+
+        mcc = MCCMetric()
+        mcc.init_from_config({'n_classes': 2})
+
+        iou = MeanIoU()
+        iou.init_from_config({'n_classes': 2})
+
+        model = tf.keras.Sequential([
+            tf.keras.layers.Softmax()
+        ])
+
+        model.compile(optimizer='adam',
+                      loss=tf.keras.losses.BinaryCrossentropy(from_logits=False),
+                      metrics=[mcc, iou])
+
+        model.fit(np.random.random(input_shape), np.ones(input_shape), epochs=1)
 
 
 if __name__ == '__main__':
