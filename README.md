@@ -66,5 +66,8 @@ Classification models for crop classification using time-series:
 * **TempCNN**: Implementation of the TempCNN network taken from the [temporalCNN implementation of Charlotte Pelletier](https://github.com/charlotte-pel/temporalCNN).
 * **Recurrent NN**: Implementation of (bidirectional) Recurrent Neural Networks for the classification of time-series. Implementation allows to use either `SimpleRNN`, `GRU` or `LSTM` layers as building blocks of the architecture.
 * **TransformerEncoder**: Implementation of a time-series classification architecture based on [self-attention](https://arxiv.org/abs/1706.03762) layers. This implementation follows [this PyTorch implementation of Marc Russwurm](https://github.com/MarcCoru/crop-type-mapping). 
+* **PSE+TAE**: Implementation of the Pixel-Set Encoder and temporal Self-attention proposed in Garnot V. _et al._ 
+["Satellite Image Time Series Classification with Pixel-Set Encoders and Temporal Self-Attention"](https://hal.archives-ouvertes.fr/hal-02879223/document). 
+This implementation is adapted from the [Pytorch version](https://github.com/VSainteuf/pytorch-psetae).  
 
 Descriptions and examples of semantic segmentation architectures are available [here](MODELS.md).
