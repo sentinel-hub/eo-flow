@@ -24,6 +24,7 @@ class FCNModel(BaseSegmentationModel):
         add_dropout = fields.Bool(missing=False, description='Add dropout to layers.')
         add_batch_norm = fields.Bool(missing=True, description='Add batch normalization to layers.')
         bias_init = fields.Float(missing=0.0, description='Bias initialization value.')
+        use_bias = fields.Bool(missing=True, description='Add bias parameters to convolutional layer.')
         padding = fields.String(missing='VALID', description='Padding type used in convolutions.')
 
         pool_size = fields.Int(missing=2, description='Kernel size used in max pooling.')
@@ -57,6 +58,7 @@ class FCNModel(BaseSegmentationModel):
                 dropout_rate=dropout_rate,
                 batch_normalization=self.config.add_batch_norm,
                 padding=self.config.padding,
+                use_bias=self.config.use_bias,
                 num_repetitions=2)(net)
 
             connection_outputs.append(conv)
@@ -76,6 +78,7 @@ class FCNModel(BaseSegmentationModel):
             add_dropout=self.config.add_dropout,
             dropout_rate=dropout_rate,
             batch_normalization=self.config.add_batch_norm,
+            use_bias=self.config.use_bias,
             num_repetitions=2,
             padding=self.config.padding)(net)
 
@@ -106,6 +109,7 @@ class FCNModel(BaseSegmentationModel):
                 add_dropout=self.config.add_dropout,
                 dropout_rate=dropout_rate,
                 batch_normalization=self.config.add_batch_norm,
+                use_bias=self.config.use_bias,
                 num_repetitions=2,
                 padding=self.config.padding)(cc)
 
@@ -137,6 +141,7 @@ class TFCNModel(BaseSegmentationModel):
         add_dropout = fields.Bool(missing=False, description='Add dropout to layers.')
         add_batch_norm = fields.Bool(missing=True, description='Add batch normalization to layers.')
         bias_init = fields.Float(missing=0.0, description='Bias initialization value.')
+        use_bias = fields.Bool(missing=True, description='Add bias parameters to convolutional layer.')
         padding = fields.String(missing='VALID', description='Padding type used in convolutions.')
         single_encoding_conv = fields.Bool(missing=False, description="Whether to apply 1 or 2 banks of conv filters.")
 
@@ -168,6 +173,7 @@ class TFCNModel(BaseSegmentationModel):
                 dropout_rate=dropout_rate,
                 batch_normalization=self.config.add_batch_norm,
                 num_repetitions=num_repetitions,
+                use_bias=self.config.use_bias,
                 padding=self.config.padding)(net)
 
             connection_outputs.append(conv)
@@ -187,6 +193,7 @@ class TFCNModel(BaseSegmentationModel):
             batch_normalization=self.config.add_batch_norm,
             num_repetitions=num_repetitions,
             padding=self.config.padding,
+            use_bias=self.config.use_bias,
             convolve_time=(not self.config.pool_time))(net)
 
         # Reduce temporal dimension
@@ -231,6 +238,7 @@ class TFCNModel(BaseSegmentationModel):
                 dropout_rate=dropout_rate,
                 batch_normalization=self.config.add_batch_norm,
                 padding=self.config.padding,
+                use_bias=self.config.use_bias,
                 num_repetitions=2)(cc)
 
         # final 1x1 convolution corresponding to pixel-wise linear combination of feature channels
