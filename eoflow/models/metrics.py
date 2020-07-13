@@ -4,6 +4,7 @@ import tensorflow_addons as tfa
 from skimage import measure
 import numpy as np
 from scipy import ndimage
+import warnings
 
 
 class InitializableMetric(tf.keras.metrics.Metric):
@@ -213,12 +214,20 @@ class GeometricMetrics(InitializableMetric):
 
     def update_state(self, reference: np.ndarray, measurement: np.ndarray, encode_reference: bool = True,
                      background_value: int = 0) -> None:
-	
+
+        if not tf.executing_eagerly():
+            warnings.warn("Geometric metrics must be run with eager execution. If running as a compiled Keras model, "
+                          "enable eager execution with model.run_eagerly = True")
+
         reference = reference.numpy() if isinstance(reference, tf.Tensor) else reference
-        measurement = measurement.numpy() if isinstance(measurement, tf.Tensor) else measurement
+        measurement = measurement.numpy() if isinstance(reference, tf.Tensor) else measurement
 
         self._validate_input(reference, measurement)
+
         for ref, meas in zip(reference, measurement):
+            ref = ref
+            meas = meas
+
             if encode_reference:
                 cc_reference = measure.label(ref, background=background_value)
             else:
@@ -227,11 +236,11 @@ class GeometricMetrics(InitializableMetric):
             cc_measurement = measure.label(meas, background=background_value)
             components_reference = set(np.unique(cc_reference)).difference([background_value])
 
-            ref_edges = self.edge_func(cc_reference, **self.edge_func_params)
-            meas_edges = self.edge_func(cc_measurement, **self.edge_func_params)
-
+            ref_edges = self.edge_func(cc_reference)
+            meas_edges = self.edge_func(cc_measurement)
             for component in components_reference:
                 reference_mask = cc_reference == component
+
                 uniq, count = np.unique(cc_measurement[reference_mask & (cc_measurement != background_value)],
                                         return_counts=True)
                 ref_area = np.sum(reference_mask)
@@ -243,26 +252,25 @@ class GeometricMetrics(InitializableMetric):
 
                 self.oversegmentation_error.append(self._segmentation_error(intersection_area, ref_area))
                 self.undersegmentation_error.append(self._segmentation_error(intersection_area, meas_area))
-
                 border_ref_edge = ref_edges.squeeze() & reference_mask.squeeze()
                 border_meas_edge = meas_edges.squeeze() & meas_mask.squeeze()
 
                 self.border_error.append(self._border_err(border_ref_edge, border_meas_edge))
                 self.fragmentation_error.append(self._fragmentation_err(len(uniq), reference_mask))
 
-    def get_oversegmentation_error(self) -> tf.Tensor:
+    def get_oversegmentation_error(self) -> float:
         return np.array(self.oversegmentation_error).mean()
 
-    def get_undersegmentation_error(self) -> tf.Tensor :
+    def get_undersegmentation_error(self) -> float:
         return np.array(self.undersegmentation_error).mean()
 
-    def get_border_error(self) -> tf.Tensor:
+    def get_border_error(self) -> float:
         return np.array(self.border_error).mean()
 
-    def get_fragmentation_error(self) -> tf.Tensor:
+    def get_fragmentation_error(self) -> float:
         return np.array(self.fragmentation_error).mean()
 
-    def result(self) -> List[tf.Tensor]:
+    def result(self) -> List[float]:
         return [self.get_oversegmentation_error(),
                 self.get_undersegmentation_error(),
                 self.get_border_error(), self.get_fragmentation_error()]
