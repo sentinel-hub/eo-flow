@@ -35,6 +35,7 @@
                     "batches_per_epoch": 200
                 }
             },
+            "iterations_per_epoch": 50,
             "save_steps": 100,
             "summary_steps": 50
         }

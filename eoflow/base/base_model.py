@@ -62,6 +62,7 @@ class BaseModel(tf.keras.Model, Configurable):
 
         # Checkpoint saving callback
         checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(checkpoints_path,
+                                                                 save_best_only=True,
                                                                  save_freq=save_steps,
                                                                  save_weights_only=True)
         return self.fit(dataset,

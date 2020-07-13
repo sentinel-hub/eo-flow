@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from tensorflow.keras.layers import Activation, SpatialDropout1D, Lambda
+from tensorflow.keras.layers import Activation, SpatialDropout1D, Lambda, UpSampling2D, AveragePooling2D
 from tensorflow.keras.layers import Conv1D, BatchNormalization, LayerNormalization
 
 
@@ -134,8 +134,8 @@ class ResidualBlock(tf.keras.layers.Layer):
 class Conv2D(tf.keras.layers.Layer):
     """ Multiple repetitions of 2d convolution, batch normalization and dropout layers. """
 
-    def __init__(self, filters, kernel_size=3, strides=1, padding='VALID', add_dropout=True, dropout_rate=0.2,
-                 batch_normalization=False, num_repetitions=1):
+    def __init__(self, filters, kernel_size=3, strides=1, dilation=1, padding='VALID', add_dropout=True,
+                 dropout_rate=0.2, activation='relu', batch_normalization=False, use_bias=True, num_repetitions=1):
         super().__init__()
 
         repetitions = []
@@ -146,8 +146,10 @@ class Conv2D(tf.keras.layers.Layer):
                 filters=filters,
                 kernel_size=kernel_size,
                 strides=strides,
+                dilation_rate=dilation,
                 padding=padding,
-                activation='relu'
+                use_bias=use_bias,
+                activation=activation
             ))
 
             if batch_normalization:
@@ -166,11 +168,55 @@ class Conv2D(tf.keras.layers.Layer):
         return self.combined_layer(inputs, training=training)
 
 
+class ResConv2D(tf.keras.layers.Layer):
+    """
+    Layer of N residual convolutional blocks stacked in parallel
+
+    This layer stacks in parallel a sequence of 2 2D convolutional layers and returns the addition of their output
+    feature tensors with the input tensor. N number of convolutional blocks can be added together with different kernel
+    size and dilation rate, which are specified as a list. If the inputs are not a list, the same parameters are used
+    for all convolutional blocks.
+
+    """
+
+    def __init__(self, filters, kernel_size=3, strides=1, dilation=1, padding='VALID', add_dropout=True,
+                 dropout_rate=0.2, activation='relu', use_bias=True, batch_normalization=False, num_parallel=1):
+        super().__init__()
+
+        if isinstance(kernel_size, list) and len(kernel_size) != num_parallel:
+            raise ValueError('Number of specified kernel sizes needs to match num_parallel')
+
+        if isinstance(dilation, list) and len(dilation) != num_parallel:
+            raise ValueError('Number of specified dilation rate sizes needs to match num_parallel')
+
+        kernel_list = kernel_size if isinstance(kernel_size, list) else [kernel_size]*num_parallel
+        dilation_list = dilation if isinstance(dilation, list) else [dilation]*num_parallel
+
+        self.convs = [Conv2D(filters,
+                             kernel_size=k,
+                             strides=strides,
+                             dilation=d,
+                             padding=padding,
+                             activation=activation,
+                             add_dropout=add_dropout,
+                             dropout_rate=dropout_rate,
+                             use_bias=use_bias,
+                             batch_normalization=batch_normalization,
+                             num_repetitions=2) for k, d in zip(kernel_list, dilation_list)]
+
+        self.add = tf.keras.layers.Add()
+
+    def call(self, inputs, training=False):
+        outputs = [conv_layer(inputs, training=training) for conv_layer in self.convs]
+
+        return self.add(outputs + [inputs])
+
+
 class Conv3D(tf.keras.layers.Layer):
     """ Multiple repetitions of 3d convolution, batch normalization and dropout layers. """
 
     def __init__(self, filters, kernel_size=3, strides=1, padding='VALID', add_dropout=True, dropout_rate=0.2,
-                 batch_normalization=False, num_repetitions=1, convolve_time=True):
+                 batch_normalization=False, use_bias=True, num_repetitions=1, convolve_time=True):
         super().__init__()
 
         repetitions = []
@@ -185,6 +231,7 @@ class Conv3D(tf.keras.layers.Layer):
                 kernel_size=kernel_shape,
                 strides=strides,
                 padding=padding,
+                use_bias=use_bias,
                 activation='relu'
             ))
 
@@ -294,3 +341,59 @@ class Reduce3DTo2D(tf.keras.layers.Layer):
 
         # Squeeze along temporal dimension
         return tf.squeeze(r, axis=[1])
+
+
+class PyramidPoolingModule(tf.keras.layers.Layer):
+    """
+    Implementation of the Pyramid Pooling Module
+
+    Implementation taken from the following paper
+
+    Zhao et al. - Pyramid Scene Parsing Network - https://arxiv.org/pdf/1612.01105.pdf
+
+    PyTorch implementation https://github.com/hszhao/semseg/blob/master/model/pspnet.py
+    """
+    def __init__(self, filters, bins=(1, 2, 4, 8), interpolation='bilinear', batch_normalization=False):
+        super().__init__()
+
+        self.filters = filters
+        self.bins = bins
+        self.batch_normalization = batch_normalization
+        self.interpolation = interpolation
+        self.layers = None
+
+    def build(self, input_size):
+        _, height, width, n_features = input_size
+
+        layers = []
+
+        for bin_size in self.bins:
+
+            size_factors = height // bin_size, width // bin_size
+
+            layer = tf.keras.Sequential()
+            layer.add(AveragePooling2D(pool_size=size_factors,
+                                       padding='same'))
+            layer.add(tf.keras.layers.Conv2D(filters=self.filters//len(self.bins),
+                                             kernel_size=1,
+                                             padding='same',
+                                             use_bias=False))
+            if self.batch_normalization:
+                layer.add(BatchNormalization())
+            layer.add(Activation('relu'))
+
+            layer.add(UpSampling2D(size=size_factors, interpolation=self.interpolation))
+
+            layers.append(layer)
+
+        self.layers = layers
+
+    def call(self, inputs, training=None):
+        """ Concatenate the output of the pooling layers, resampled to original size """
+        _, height, width, _ = inputs.shape
+
+        outputs = [inputs]
+
+        outputs += [layer(inputs, training=training) for layer in self.layers]
+
+        return tf.concat(outputs, axis=-1)

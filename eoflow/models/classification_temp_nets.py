@@ -10,6 +10,7 @@ from .layers import ResidualBlock
 from .classification_base import BaseClassificationModel
 
 from . import transformer_encoder_layers
+from . import pse_tae_layers
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
@@ -83,7 +84,7 @@ class TCNModel(BaseClassificationModel):
                 skip_connections.append(skip_out)
 
         # Author: @karolbadowski.
-        output_slice_index = int(net.output_shape.as_list()[1] / 2) \
+        output_slice_index = int(net.shape.as_list()[1] / 2) \
             if self.config.padding.lower() == 'same' else -1
         lambda_layer = tf.keras.layers.Lambda(lambda tt: tt[:, output_slice_index, :])
 
@@ -200,10 +201,11 @@ class BiRNN(BaseClassificationModel):
         kernel_initializer = fields.Str(missing='he_normal', description='Method to initialise kernel parameters.')
         kernel_regularizer = fields.Float(missing=1e-6, description='L2 regularization parameter.')
 
+        layer_norm = fields.Bool(missing=True, description='Whether to apply layer normalization in the encoder.')
+        batch_norm = fields.Bool(missing=False, description='Whether to use batch normalisation.')
 
     def _rnn_layer(self, last=False):
         """ Returns a RNN layer for current configuration. Use `last=True` for the last RNN layer. """
-
         RNNLayer = rnn_layers[self.config.rnn_layer]
         dropout_rate = 1 - self.config.keep_prob
 
@@ -219,10 +221,22 @@ class BiRNN(BaseClassificationModel):
 
     def init_model(self):
         """ Creates the RNN model architecture. """
+        layers = []
+        if self.config.layer_norm:
+            layer_norm = tf.keras.layers.LayerNormalization()
+            layers.append(layer_norm)
 
         # RNN layers
-        layers = [self._rnn_layer() for _ in range(self.config.rnn_blocks-1)]
+        layers.extend([self._rnn_layer() for _ in range(self.config.rnn_blocks-1)])
         layers.append(self._rnn_layer(last=True))
+
+        if self.config.batch_norm:
+            batch_norm = tf.keras.layers.BatchNormalization()
+            layers.append(batch_norm)
+
+        if self.config.layer_norm:
+            layer_norm = tf.keras.layers.LayerNormalization()
+            layers.append(layer_norm)
 
         dense = tf.keras.layers.Dense(units=self.config.n_classes,
                                       activation=self.config.activation,
@@ -298,3 +312,57 @@ class TransformerEncoder(BaseClassificationModel):
 
     def call(self, inputs, training=None, mask=None):
         return self.net(inputs, training, mask)
+
+
+class PseTae(BaseClassificationModel):
+    """ Implementation of the Pixel-Set encoder + Temporal Attention Encoder sequence classifier
+
+    Code is based on the Pytorch implementation of V. Sainte Fare Garnot et al. https://github.com/VSainteuf/pytorch-psetae
+    """
+
+    class PseTaeSchema(BaseClassificationModel._Schema):
+        mlp1 = fields.List(fields.Int, missing=[10, 32, 64], description='Number of units for each layer in mlp1.')
+        pooling = fields.Str(missing='mean_std', description='Methods used for pooling. Seperated by underscore. (mean, std, max, min)')
+        mlp2 = fields.List(fields.Int, missing=[132, 128], description='Number of units for each layer in mlp2.')
+
+        num_heads = fields.Int(missing=4, description='Number of Attention heads.')
+        num_dff = fields.Int(missing=32, description='Number of feed-forward neurons in point-wise MLP.')
+        d_model = fields.Int(missing=None, description='Depth of model.')
+        mlp3 = fields.List(fields.Int, missing=[512, 128, 128], description='Number of units for each layer in mlp3.')
+        dropout = fields.Float(missing=0.2, description='Dropout rate for attention encoder.')
+        T = fields.Float(missing=1000, description='Number of features for attention.')
+        len_max_seq = fields.Int(missing=24, description='Number of features for attention.')
+        mlp4 = fields.List(fields.Int, missing=[128, 64, 32], description='Number of units for each layer in mlp4. Last layer with n_classes is added automatically.')
+
+    def init_model(self):
+        # TODO: missing features from original PseTae:
+        #   * spatial encoder extra features (hand-made)
+        #   * spatial encoder masking
+
+        self.spatial_encoder = pse_tae_layers.PixelSetEncoder(
+            mlp1=self.config.mlp1,
+            mlp2=self.config.mlp2,
+            pooling=self.config.pooling)
+
+        self.temporal_encoder = pse_tae_layers.TemporalAttentionEncoder(
+            n_head=self.config.num_heads,
+            d_k=self.config.num_dff,
+            d_model=self.config.d_model,
+            n_neurons=self.config.mlp3,
+            dropout=self.config.dropout,
+            T=self.config.T,
+            len_max_seq=self.config.len_max_seq)
+
+        mlp4_layers = [pse_tae_layers.LinearLayer(out_dim) for out_dim in self.config.mlp4]
+        # Final layer (logits)
+        mlp4_layers.append(pse_tae_layers.LinearLayer(self.config.n_classes, batch_norm=False, activation=False))
+
+        self.mlp4 = tf.keras.Sequential(mlp4_layers)
+
+    def call(self, inputs, training=None, mask=None):
+
+        out = self.spatial_encoder(inputs, training=training, mask=mask)
+        out = self.temporal_encoder(out, training=training, mask=mask)
+        out = self.mlp4(out, training=training, mask=mask)
+
+        return out

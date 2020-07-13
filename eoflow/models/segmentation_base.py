@@ -8,8 +8,9 @@ from marshmallow.validate import OneOf, ContainsOnly
 
 from ..base import BaseModel
 
-from .losses import CategoricalCrossEntropy, CategoricalFocalLoss, JaccardDistanceLoss, cropped_loss
-from .metrics import MeanIoU, InitializableMetric, CroppedMetric
+from .losses import CategoricalCrossEntropy, CategoricalFocalLoss, JaccardDistanceLoss, TanimotoDistanceLoss
+from .losses import cropped_loss
+from .metrics import MeanIoU, InitializableMetric, CroppedMetric, MCCMetric
 from .callbacks import VisualizationCallback
 
 logging.basicConfig(level=logging.INFO,
@@ -20,7 +21,8 @@ logging.basicConfig(level=logging.INFO,
 segmentation_losses = {
     'cross_entropy': CategoricalCrossEntropy,
     'focal_loss': CategoricalFocalLoss,
-    'jaccard_loss': JaccardDistanceLoss
+    'jaccard_loss': JaccardDistanceLoss,
+    'tanimoto_loss': TanimotoDistanceLoss
 }
 
 
@@ -29,7 +31,8 @@ segmentation_metrics = {
     'accuracy': lambda: tf.keras.metrics.CategoricalAccuracy(name='accuracy'),
     'iou': lambda: MeanIoU(default_max_classes=32),
     'precision': tf.keras.metrics.Precision,
-    'recall': tf.keras.metrics.Recall
+    'recall': tf.keras.metrics.Recall,
+    'mcc': MCCMetric
 }
 
 
