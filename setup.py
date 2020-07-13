@@ -12,7 +12,7 @@ def parse_requirements(file):
 setup(
     name='eo-flow',
     python_requires='>=3.5',
-    version='1.0.0',
+    version='1.1.0',
     description='Tensorflow wrapper built for prototyping and deploying earth observation deep models.',
     author='Sinergise EO research team',
     author_email='eoresearch@sinergise.com',
