@@ -1,10 +1,13 @@
+import warnings
+
 from typing import Any, Callable, List
+
+from skimage import measure
+from scipy import ndimage
+
 import tensorflow as tf
 import tensorflow_addons as tfa
-from skimage import measure
 import numpy as np
-from scipy import ndimage
-import warnings
 
 
 class InitializableMetric(tf.keras.metrics.Metric):
@@ -164,9 +167,16 @@ class MCCMetric(InitializableMetric):
 
 
 class GeometricMetrics(InitializableMetric):
+    """"
+    Implementation of Geometric error metrics. Oversegmentation, Undersegmentation, Border, Fragmentation errors.
+
+    The error metrics are based on a paper by C. Persello, A Novel Protocol for Accuracy Assessment in Classification of
+    Very High Resolution Images (https://ieeexplore.ieee.org/document/5282610)
+    """
 
     @staticmethod
     def _detect_edges(im: np.ndarray, thr: float = 0) -> np.ndarray:
+        """ Edge detection function using the sobel operator. """
         sx = ndimage.sobel(im, axis=0, mode='constant')
         sy = ndimage.sobel(im, axis=1, mode='constant')
         sob = np.hypot(sx, sy)
@@ -190,12 +200,12 @@ class GeometricMetrics(InitializableMetric):
     def _fragmentation_err(self, r: int, reference_mask: np.ndarray) -> float:
         if r <= 1:
             return 0
-        else:
-            den = np.sum(reference_mask) - self.pixel_size
-            err = (r - 1.) / den if den > 0 else 0
-            return err
+        den = np.sum(reference_mask) - self.pixel_size
+        err = (r - 1.) / den if den > 0 else 0
+        return err
 
-    def _validate_input(self, reference, measurement):
+    @staticmethod
+    def _validate_input(reference, measurement):
         if np.ndim(reference) != np.ndim(measurement):
             raise ValueError("Reference and measurement input shapes must match.")
 
@@ -214,6 +224,11 @@ class GeometricMetrics(InitializableMetric):
 
     def update_state(self, reference: np.ndarray, measurement: np.ndarray, encode_reference: bool = True,
                      background_value: int = 0) -> None:
+        """ Calculate the error metrics for a measurement and reference arrays. For each .
+
+        If encode_reference is set to True, connected components will be used to label objects in the reference and
+        measurements.
+        """
 
         if not tf.executing_eagerly():
             warnings.warn("Geometric metrics must be run with eager execution. If running as a compiled Keras model, "
@@ -259,23 +274,33 @@ class GeometricMetrics(InitializableMetric):
                 self.fragmentation_error.append(self._fragmentation_err(len(uniq), reference_mask))
 
     def get_oversegmentation_error(self) -> float:
+        """ Return oversegmentation error. """
         return np.array(self.oversegmentation_error).mean()
 
     def get_undersegmentation_error(self) -> float:
+        """ Return undersegmentation error. """
+
         return np.array(self.undersegmentation_error).mean()
 
     def get_border_error(self) -> float:
+        """ Return border error. """
+
         return np.array(self.border_error).mean()
 
     def get_fragmentation_error(self) -> float:
+        """ Return fragmentation error. """
+
         return np.array(self.fragmentation_error).mean()
 
     def result(self) -> List[float]:
+        """ Return a list  of values representing oversegmentation, undersegmentation, border, fragmentation errors. """
+
         return [self.get_oversegmentation_error(),
                 self.get_undersegmentation_error(),
                 self.get_border_error(), self.get_fragmentation_error()]
 
     def reset_states(self) -> None:
+        """ Empty all the error arrays. """
         self.oversegmentation_error = []
         self.undersegmentation_error = []
         self.border_error = []
