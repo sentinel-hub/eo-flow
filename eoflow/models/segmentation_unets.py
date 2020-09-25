@@ -260,6 +260,10 @@ class ResUnetA(FCNModel):
 
     https://github.com/feevos/resuneta/tree/145be5519ee4bec9a8cce9e887808b8df011f520/models
 
+    NOTE: The input to this network is a dictionary specifying input features and three output target images. This
+    might require some modification to the functions used to automate training and evaluation. Get in touch through
+    issues if this happens.
+
     TODO: build architecture from parameters as for FCn and TFCN
 
     """
