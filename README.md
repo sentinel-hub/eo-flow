@@ -60,6 +60,7 @@ Project also contains other folders:
 Segmentation models for land cover semantic segmentation:
 * **Fully-Convolutional-Network (FCN, a.k.a. U-net)**, vanilla implementation of method described in this [paper](https://arxiv.org/abs/1505.04597). This network expects 2D MSI images as inputs and predicts 2D label maps as output.
 * **Temporal FCN**, where the whole time-series is considered as a 3D MSI volume and convolutions are performed along the temporal dimension as well spatial dimension. The output of the network is a 2D label map as in previous cases. More details can be found in this [paper](https://www.researchgate.net/publication/333262625_Spatio-Temporal_Deep_Learning_An_Application_to_Land_Cover_Classification).
+* **ResUNet-a**, architecture proposed in Diakogiannis et al. ["ResUNet-a: A deep learning framework for semantic segmetnation of remotely sensed data"](https://www.sciencedirect.com/science/article/abs/pii/S0924271620300149). Original `mxnet` implementation can be found [here](https://github.com/feevos/resuneta).
 
 Classification models for crop classification using time-series:
 * **TCN**: Implementation of the TCN network taken from the [keras-TCN implementation by Philippe Remy](https://github.com/philipperemy/keras-tcn).
