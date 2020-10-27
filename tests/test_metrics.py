@@ -2,7 +2,8 @@ import unittest
 import numpy as np
 
 from eoflow.models.metrics import MeanIoU, MCCMetric
-
+from eoflow.models.metrics import GeometricMetrics
+from scipy import ndimage
 
 class TestMeanIoU(unittest.TestCase):
     def test_not_initialized(self):
@@ -146,6 +147,93 @@ class TestMCC(unittest.TestCase):
         metric.update_state(y_true, y_pred)
         self.assertAlmostEqual(metric.result().numpy()[0], -0.3333333, 7)
 
+
+class TestGeometricMetric(unittest.TestCase):
+
+    def detect_edges(self, im, thr=0):
+        sx = ndimage.sobel(im, axis=0, mode='constant')
+        sy = ndimage.sobel(im, axis=1, mode='constant')
+        sob = np.hypot(sx, sy)
+        return sob > thr
+
+    def test_equal_geometries(self):
+
+        metric = GeometricMetrics(edge_func=self.detect_edges)
+
+        y_true = np.zeros((2, 32, 32))
+        y_pred = np.zeros((2, 32, 32))
+
+        y_true[0, 10:20, 10:20] = 1
+        y_pred[0, 10:20, 10:20] = 1
+
+        y_true[1, 0:10, 0:10] = 1
+        y_pred[1, 0:10, 0:10] = 1
+
+        y_true[1, 15:20, 15:20] = 1
+        y_pred[1, 15:20, 15:20] = 1
+
+        metric.update_state(y_true, y_pred)
+        overseg_err, underseg_err, border_err, fragmentation_err = metric.result()
+
+        self.assertEqual(overseg_err, 0., "For equal geometries oversegmentation should be 0!")
+        self.assertEqual(underseg_err, 0., "For equal geometries undersegmentation should be 0!")
+        self.assertEqual(fragmentation_err, 0., "For equal geometries fragmentation error should be 0!")
+        self.assertEqual(border_err, 0., "For equal geometries border error should be 0!")
+
+    def test_empty_geometries(self):
+
+        metric = GeometricMetrics(edge_func=self.detect_edges)
+
+        y_true = np.ones((1, 32, 32))
+        y_pred = np.zeros((1, 32, 32))
+
+        metric.update_state(y_true, y_pred)
+        overseg_err, underseg_err, border_err, fragmentation_err = metric.result()
+
+        self.assertEqual(overseg_err, 1., "For empty geometries oversegmentation should be 1!")
+        self.assertEqual(underseg_err, 1., "For empty geometries undersegmentation should be 1!")
+        self.assertEqual(fragmentation_err, 0., "For empty geometries fragmentation error should be 0!")
+        self.assertEqual(border_err, 1., "For empty geometries border error should be 1!")
+
+    def test_quarter(self):
+        metric = GeometricMetrics(edge_func=self.detect_edges)
+
+        # A quarter of measurement covers a quarter of reference
+        y_true = np.zeros((1, 200, 200))
+        y_pred = np.zeros((1, 200, 200))
+
+        y_true[0, :100, :100] = 1
+        y_pred[0, 50:150, 50:150] = 1
+
+        metric.update_state(y_true, y_pred)
+        overseg_err, underseg_err, border_err, fragmentation_err = metric.result()
+
+        self.assertEqual(overseg_err, 0.75)
+        self.assertEqual(underseg_err, 0.75)
+        self.assertEqual(fragmentation_err, 0.)
+        self.assertAlmostEqual(border_err, 0.9949494949494949)
+
+    def test_multiple(self):
+        metric = GeometricMetrics(edge_func=self.detect_edges)
+
+        # A quarter of measurement covers a quarter of reference
+        y_true = np.zeros((1, 200, 200))
+        y_pred = np.zeros((1, 200, 200))
+
+        y_true[0, 10:20, 20:120] = 1
+        y_true[0, 30:40, 20:120] = 1
+        y_true[0, 50:60, 20:120] = 1
+
+        y_pred[0, 15:33, 20:120] = 1
+        y_pred[0, 36:65, 20:120] = 1
+
+        metric.update_state(y_true, y_pred)
+
+        overseg_err, underseg_err, border_err, fragmentation_err = metric.result()
+        self.assertEqual(overseg_err, 0.3666666666666667)
+        self.assertEqual(underseg_err, 0.7464878671775222)
+        self.assertEqual(fragmentation_err, 0.000333667000333667)
+        self.assertAlmostEqual(border_err, 0.9413580246913581)
 
 if __name__ == '__main__':
     unittest.main()
