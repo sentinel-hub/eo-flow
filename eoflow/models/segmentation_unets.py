@@ -202,7 +202,8 @@ class TFCNModel(BaseSegmentationModel):
             kernel_size=self.config.conv_size_reduce,
             stride=self.config.conv_stride,
             add_dropout=self.config.add_dropout,
-            dropout_rate=dropout_rate)(bottom)
+            dropout_rate=dropout_rate,
+            padding=self.config.padding)(bottom)
 
         net = bottom
         # decoding path
@@ -224,7 +225,8 @@ class TFCNModel(BaseSegmentationModel):
                 kernel_size=self.config.conv_size_reduce,
                 stride=self.config.conv_stride,
                 add_dropout=self.config.add_dropout,
-                dropout_rate=dropout_rate)(connection_outputs[conterpart_layer])
+                dropout_rate=dropout_rate,
+                padding=self.config.padding)(connection_outputs[conterpart_layer])
 
             # crop and concatenate
             cc = CropAndConcat()(reduced, deconv)
