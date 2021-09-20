@@ -310,7 +310,7 @@ class MaxPool3D(tf.keras.layers.Layer):
 class Reduce3DTo2D(tf.keras.layers.Layer):
     """ Reduces 3d representations into 2d using 3d convolution over the whole time dimension. """
 
-    def __init__(self, filters, kernel_size=3, stride=1, add_dropout=False, dropout_rate=0.2):
+    def __init__(self, filters, kernel_size=3, stride=1, add_dropout=False, dropout_rate=0.2, padding='VALID'):
         super().__init__()
 
         self.filters = filters
@@ -319,10 +319,17 @@ class Reduce3DTo2D(tf.keras.layers.Layer):
         self.add_dropout = add_dropout
         self.dropout_rate = dropout_rate
         self.layer = None
+        self.padding = padding
 
     def build(self, input_size):
         t_size = input_size[1]
         layer = []
+        # Manually pad spatial dimensions
+        # (using padding='SAME' in Conv3D also pads the time dimension which we do not want)
+        if self.padding in ["SAME", "same"]:
+            layer.append(tf.keras.layers.ZeroPadding3D(
+                padding=(0,(self.kernel_size-1)/2, (self.kernel_size-1)/2)
+                ))
         layer.append(tf.keras.layers.Conv3D(
             self.filters,
             kernel_size=(t_size, self.kernel_size, self.kernel_size),
@@ -339,7 +346,6 @@ class Reduce3DTo2D(tf.keras.layers.Layer):
     def call(self, inputs, training=None):
         r = self.layer(inputs, training=training)
 
-        # Squeeze along temporal dimension
         return tf.squeeze(r, axis=[1])
 
 
