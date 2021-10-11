@@ -6,8 +6,13 @@ from . import Configurable
 
 
 class BaseModel(tf.keras.Model, Configurable):
-    def __init__(self, config_specs):
+    #def __init__(self, config_specs, **kwargs):
+    def __init__(self, *args, **kwargs):
         tf.keras.Model.__init__(self)
+        if kwargs and not args:
+            config_specs = kwargs
+        else:
+            config_specs = args[0]
         Configurable.__init__(self, config_specs)
 
         self.net = None
