@@ -33,7 +33,7 @@ class BaseClassificationModel(BaseModel):
     """ Base for pixel-wise classification models. """
 
     class _Schema(Schema):
-        n_classes = fields.Int(required=True, description='Number of classes', example=2)
+        n_classes = fields.Raw(required=True, description='Number of classes', example=2) # raw so can pass list of ints for multi output models
         learning_rate = fields.Float(missing=None, description='Learning rate used in training.', example=0.01)
         loss = fields.String(missing='cross_entropy', description='Loss function used for training.',
                              validate=OneOf(classification_losses.keys()))
