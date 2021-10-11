@@ -266,47 +266,98 @@ class TransformerEncoder(BaseClassificationModel):
     """
 
     class TransformerEncoderSchema(BaseClassificationModel._Schema):
-        keep_prob = fields.Float(required=True, description='Keep probability used in dropout layers.', example=0.5)
+        dropout_rate = fields.Float(required=True, description='Dropout probability used in dropout layers.', example=0.2)
 
         num_heads = fields.Int(missing=8, description='Number of Attention heads.')
         num_layers = fields.Int(missing=4, description='Number of encoder layers.')
         num_dff = fields.Int(missing=512, description='Number of feed-forward neurons in point-wise MLP.')
         d_model = fields.Int(missing=128, description='Depth of model.')
-        max_pos_enc = fields.Int(missing=24, description='Maximum length of positional encoding.')
         layer_norm = fields.Bool(missing=True, description='Whether to apply layer normalization in the encoder.')
+        
+        input_bands = fields.Int(required=True, description='Number of input bands')
+        time_series_length = fields.Int(required=True, description='Length of input time series.')
+        #return_attention_masks = fields.Bool(missing=False, description='Whether to return the attention masks (not suitable for model training).')
+        custom_pos_enc = fields.Bool(missing=False, description='Whether to use custom positional encoding')
+        #augmentation layers?
+        #input_dropout = fields.List((fields.Float(missing=0.), fields.Float(missing=0.)), description='Min and max input observation dropout rates. 0,0 means no dropout.')
+        input_dropout_min = fields.Int(missing=0, description='Min and max input observation dropout rates. 0,0 means no dropout.')
+        input_dropout_max = fields.Int(missing=0, description='Min and max input observation dropout rates. 0,0 means no dropout.')
 
         activation = fields.Str(missing='linear', description='Activation function used in final dense filters.')
 
     def init_model(self):
+
+        input_shape = (self.config.time_series_length, self.config.input_bands)
+        self.input_shapes = input_shape
+
+        self.input_dropout = (self.config.input_dropout_min, self.config.input_dropout_max)
+
+        '''
+        Model architecture
+        - Input_shape
+        - possible extra input layers, e.g. augmentation to drop samples at input
+            - input ob dropout doesn't change the shape, so easy to implement later
+        - transformer encoder block
+        - Dense
+        - Temp collapse/classification layers (max pool, dense, softmax, etc.)
+        
+        '''
+        # initialise input augmentation layers here with appropriate inputs so can be joined later
 
         self.encoder = transformer_encoder_layers.Encoder(
             num_layers=self.config.num_layers,
             d_model=self.config.d_model,
             num_heads=self.config.num_heads,
             dff=self.config.num_dff,
-            maximum_position_encoding=self.config.max_pos_enc,
-            layer_norm=self.config.layer_norm)
+            input_shape=input_shape,
+            layer_norm=self.config.layer_norm,
+            return_attention_masks=True,
+            dropout_rate=self.config.dropout_rate,
+            custom_pos_enc = self.config.custom_pos_enc)
 
-        self.dense = tf.keras.layers.Dense(units=self.config.n_classes,
+        # handle single or multi-output models
+        if type(self.config.n_classes) is not list:
+            self.config.n_classes = [self.config.n_classes]
+        
+        self.dense = [tf.keras.layers.Dense(units=n_classes,
                                            activation=self.config.activation)
+                                           for n_classes in self.config.n_classes]
 
-    def build(self, inputs_shape):
+        self.build(None)# (doesn't actually need input_shape)
+
+    def build(self, _input_shape):
         """ Build Transformer encoder architecture
 
-        The `inputs_shape` argument is a `(N, T, D)` tuple where `N` denotes the number of samples, `T` the number of
-        time-frames, and `D` the number of channels
+            .net is model used for training
+            .att_net is net which also returns attention masks and can be used for prediction only
         """
-        seq_len = inputs_shape[1]
+        seq_len = self.input_shapes[0]
 
-        self.net = tf.keras.Sequential([
-            self.encoder,
-            self.dense,
-            tf.keras.layers.MaxPool1D(pool_size=seq_len),
-            tf.keras.layers.Lambda(lambda x: tf.keras.backend.squeeze(x, axis=-2), name='squeeze'),
-            tf.keras.layers.Softmax()
-        ])
+        model_input = tf.keras.Input(self.input_shapes)
+
+        # add input agumentation layers here
+        if self.input_dropout == (0,0):
+            aug_layers = model_input
+        else:
+            aug_layers = transformer_encoder_layers.InputDropout(*self.config.input_dropout)(model_input)
+
+        encoder = self.encoder(aug_layers)
+        softmax_outputs = []
+        for d in self.dense:
+            dense = d(encoder[0]) # 0th tensor of encoder is the real output, others are attention masks
+
+            max_pool = tf.keras.layers.MaxPool1D(pool_size=seq_len)(dense)
+            squeeze = tf.keras.layers.Lambda(lambda x: tf.keras.backend.squeeze(x, axis=-2))(max_pool)
+            softmax = tf.keras.layers.Softmax()(squeeze)
+            softmax_outputs.append(softmax)
+
+        model_output = softmax_outputs + encoder[1:]
+
+        self.att_net = tf.keras.Model(inputs=model_input, outputs=model_output)
+        self.net = tf.keras.Model(inputs=model_input, outputs=model_output[0:len(softmax_outputs)])
+    
         # Build the model, so we can print the summary
-        self.net.build(inputs_shape)
+        self.net.build(self.input_shapes)
 
         print_summary(self.net)
 
