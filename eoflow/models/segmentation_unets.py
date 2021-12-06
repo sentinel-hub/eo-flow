@@ -248,10 +248,10 @@ class TFCNModel(BaseSegmentationModel):
             logits = tf.keras.layers.Conv2D(
                     filters=self.config.n_classes,
                     kernel_size=1)(net)
+            logits = tf.keras.layers.Softmax()(logits)
         else:
-            logits = net
-
-        logits = tf.keras.layers.Softmax()(logits)
+            # In case of a regression model
+            logits = tf.keras.layers.Activation(tf.keras.activations.sigmoid)(net)
 
         self.net = tf.keras.Model(inputs=x, outputs=logits)
 
