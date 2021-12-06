@@ -328,7 +328,7 @@ class Reduce3DTo2D(tf.keras.layers.Layer):
         # (using padding='SAME' in Conv3D also pads the time dimension which we do not want)
         if self.padding in ["SAME", "same"]:
             layer.append(tf.keras.layers.ZeroPadding3D(
-                padding=(0,(self.kernel_size-1)/2, (self.kernel_size-1)/2)
+                padding=(0, (self.kernel_size-1) // 2, (self.kernel_size-1) // 2)
                 ))
         layer.append(tf.keras.layers.Conv3D(
             self.filters,

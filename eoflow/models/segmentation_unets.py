@@ -244,9 +244,12 @@ class TFCNModel(BaseSegmentationModel):
                 num_repetitions=2)(cc)
 
         # final 1x1 convolution corresponding to pixel-wise linear combination of feature channels
-        logits = tf.keras.layers.Conv2D(
-                filters=self.config.n_classes,
-                kernel_size=1)(net)
+        if self.config.n_classes:
+            logits = tf.keras.layers.Conv2D(
+                    filters=self.config.n_classes,
+                    kernel_size=1)(net)
+        else:
+            logits = net
 
         logits = tf.keras.layers.Softmax()(logits)
 
