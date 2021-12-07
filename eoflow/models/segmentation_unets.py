@@ -243,15 +243,20 @@ class TFCNModel(BaseSegmentationModel):
                 use_bias=self.config.use_bias,
                 num_repetitions=2)(cc)
 
+        logits = tf.keras.layers.Conv2D(
+            filters=self.config.n_classes,
+            kernel_size=1)(net)
+        logits = tf.keras.layers.Activation(tf.keras.activations.sigmoid)(logits)
+
         # final 1x1 convolution corresponding to pixel-wise linear combination of feature channels
-        if self.config.n_classes:
-            logits = tf.keras.layers.Conv2D(
-                    filters=self.config.n_classes,
-                    kernel_size=1)(net)
-            logits = tf.keras.layers.Softmax()(logits)
-        else:
-            # In case of a regression model
-            logits = tf.keras.layers.Activation(tf.keras.activations.sigmoid)(net)
+        # if self.config.n_classes:
+        #     logits = tf.keras.layers.Conv2D(
+        #             filters=self.config.n_classes,
+        #             kernel_size=1)(net)
+        #     logits = tf.keras.layers.Softmax()(logits)
+        # else:
+        #     # In case of a regression model
+        #     logits = tf.keras.layers.Activation(tf.keras.activations.sigmoid)(net)
 
         self.net = tf.keras.Model(inputs=x, outputs=logits)
 
