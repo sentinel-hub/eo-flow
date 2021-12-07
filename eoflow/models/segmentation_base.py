@@ -44,8 +44,9 @@ class BaseSegmentationModel(BaseModel):
         learning_rate = fields.Float(missing=None, description='Learning rate used in training.', example=0.01)
         loss = fields.String(missing='cross_entropy', description='Loss function used for training.',
                              validate=OneOf(segmentation_losses.keys()))
-        metrics = fields.List(fields.Raw, missing=['accuracy', 'iou'],
-                              description='List of metrics used for evaluation.')
+        metrics = fields.List(fields.String, missing=['accuracy', 'iou'],
+                              description='List of metrics used for evaluation.',
+                              validate=ContainsOnly(segmentation_metrics.keys()))
 
         class_weights = fields.Dict(missing=None, description='Dictionary mapping class id with weight. '
                                                               'If key for some labels is not specified, 1 is used.')
