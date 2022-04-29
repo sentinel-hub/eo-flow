@@ -1,5 +1,3 @@
-import logging
-
 import numpy as np
 import tensorflow as tf
 from marshmallow import Schema, fields
@@ -9,9 +7,6 @@ from ..base import BaseModel
 
 from .losses import CategoricalCrossEntropy, CategoricalFocalLoss
 from .metrics import InitializableMetric
-
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(levelname)s %(message)s')
 
 
 # Available losses. Add keys with new losses here.
