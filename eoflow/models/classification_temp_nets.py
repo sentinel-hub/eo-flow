@@ -1,4 +1,3 @@
-import logging
 import tensorflow as tf
 from marshmallow import fields
 from marshmallow.validate import OneOf
@@ -12,8 +11,6 @@ from .classification_base import BaseClassificationModel
 from . import transformer_encoder_layers
 from . import pse_tae_layers
 
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(levelname)s %(message)s')
 
 rnn_layers = dict(rnn=SimpleRNN, gru=GRU, lstm=LSTM)
 

@@ -1,5 +1,4 @@
 import os
-import logging
 
 import numpy as np
 import tensorflow as tf
@@ -12,9 +11,6 @@ from .losses import CategoricalCrossEntropy, CategoricalFocalLoss, JaccardDistan
 from .losses import cropped_loss
 from .metrics import MeanIoU, InitializableMetric, CroppedMetric, MCCMetric
 from .callbacks import VisualizationCallback
-
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(levelname)s %(message)s')
 
 
 # Available losses. Add keys with new losses here.
