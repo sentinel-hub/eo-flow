@@ -2,7 +2,7 @@ from abc import ABC
 import inspect
 import json
 
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, EXCLUDE
 from munch import Munch
 
 
@@ -59,7 +59,7 @@ class Configurable(ABC):
             with open(config_specs, 'r') as config_file:
                 config_specs = json.load(config_file)
 
-        return Config(self.schema.load(config_specs))
+        return Config(self.schema.load(config_specs, unknown=EXCLUDE))
 
     def show_config(self):
         print(json.dumps(self.config, indent=4))
